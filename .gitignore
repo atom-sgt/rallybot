@@ -1,3 +1,7 @@
+# Private Client Info
+client.json
+data/leaderboard.json
+
 # Logs
 logs
 *.log
