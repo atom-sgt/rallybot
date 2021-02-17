@@ -28,6 +28,7 @@ function commandListener(message) {
 		case 'rallybot':
 			rallyBot(message, args);
 	}
+	// TODO: Will there ever be more here?
 }
 
 function rallyBot(message, args) {
@@ -66,12 +67,11 @@ function rallyBot(message, args) {
 				logUserFeedback(message, args);
 				break;
 			default:
-				// TODO: Parse time-only message?
 				sendHelpMessage(message);
 		}
 	} catch (error) {
 		console.error(error);
-		message.channel.send("Something went wrong. <@sgt>");
+		message.channel.send("Something went wrong.");
 	}
 }
 
@@ -109,14 +109,11 @@ function resetBoard(message, args) {
 }
 
 function addRecord(message, args) {
-	// TODO: Store time as ms instead of formatted string
-	// TODO: Store link to add message
 	// Skip no time 
 	if(!args.length) {
 		message.channel.send("Please specify a time to add.");
 	}
 	
-	// TODO: accept target user
 	let username = message.author.username;
 	let newTime = args.shift();
 	let timeFormat = /\d+:\d{2}([.]\d{1,3})?/;
@@ -129,8 +126,6 @@ function addRecord(message, args) {
 		let isNew = !userRecord.length;
 		userRecord.push({ username, time:newTime })
 		userRecord = userRecord.sort(sortFormattedTime)[0];
-
-		// TODO: Message on unbeaten time
 
 		// Add user time to records
 		data.records = data.records
@@ -148,7 +143,6 @@ function addRecord(message, args) {
 }
 
 function buildAddTimeResponse(isPb, isNew, rank) {
-	// TODO: No time improvement.
 	let message = `Time added.  Your current rank is **#${rank}**.`;
 	if (!isNew && isPb) {
 		message += "\nA new personal best!";
@@ -165,7 +159,6 @@ function removeRecord(message, args) {
 	}
 
 	let target = args.shift();
-	// TODO: Confirm removal before sending message.	
 	if(target.match(/^#?\d/)) {
 		removeByRank(message, target.match(/\d+/));
 	} else {
@@ -207,7 +200,6 @@ function removeByUsername(message, username) {
 }
 
 function sendBoard(message, args) {
-	// TODO: Get server-specifc board
 	let data = JSON.parse(fs.readFileSync('./data/leaderboard.json', 'utf8'));
 	
 	message.channel.send(formatLeaderboard(data));
