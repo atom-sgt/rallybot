@@ -4,6 +4,7 @@ const { token } = require('./client.json');
 const { prefix } = require('./config.json');
 // Data
 const { classes, locations } = require('./data/dr2.json');
+const leaderboardFile = './data/leaderboard.json';
 
 // Start Discord client
 const client = new Discord.Client();
@@ -99,13 +100,13 @@ function initBoard(message, args) {
 		records: [],
 	};
 	
-	fs.writeFileSync('./data/leaderboard.json', JSON.stringify(data));
+	fs.writeFileSync(leaderboardFile, JSON.stringify(data));
 }
 
 function resetBoard(message, args) {
-	let data = JSON.parse(fs.readFileSync('./data/leaderboard.json', 'utf8'));
+	let data = JSON.parse(fs.readFileSync(leaderboardFile, 'utf8'));
 	data.records = [];
-	fs.writeFileSync('./data/leaderboard.json', JSON.stringify(data));
+	fs.writeFileSync(leaderboardFile, JSON.stringify(data));
 }
 
 function addRecord(message, args) {
@@ -119,7 +120,7 @@ function addRecord(message, args) {
 	let timeFormat = /\d+:\d{2}([.]\d{1,3})?/;
 	
 	if(newTime.match(timeFormat)) {
-		let data = JSON.parse(fs.readFileSync('./data/leaderboard.json', 'utf8'));
+		let data = JSON.parse(fs.readFileSync(leaderboardFile, 'utf8'));
 
 		// Find, compare, and replace user time(s)
 		let userRecord = data.records.filter(rec => rec.username === username)
@@ -134,7 +135,7 @@ function addRecord(message, args) {
 			.sort(sortFormattedTime);
 
 		// Write new records
-		fs.writeFileSync('./data/leaderboard.json', JSON.stringify(data));
+		fs.writeFileSync(leaderboardFile, JSON.stringify(data));
 
 		let isPb = userRecord.time === newTime;
 		let rank = data.records.findIndex(val => val.username === username) + 1;
@@ -180,7 +181,7 @@ function removeByRank(message, rank) {
 }
 
 function removeByUsername(message, username) {
-	let data = JSON.parse(fs.readFileSync('./data/leaderboard.json', 'utf8'));
+	let data = JSON.parse(fs.readFileSync(leaderboardFile, 'utf8'));
 	
 	// Remove leading @
 	username = username.replace(/^@/, '');
@@ -191,7 +192,7 @@ function removeByUsername(message, username) {
 			.filter(rec => rec.username !== username);
 
 		// Write new records
-		fs.writeFileSync('./data/leaderboard.json', JSON.stringify(data));
+		fs.writeFileSync(leaderboardFil, JSON.stringify(data));
 
 		message.channel.send("Record removed.");
 	} else {
@@ -200,7 +201,7 @@ function removeByUsername(message, username) {
 }
 
 function sendBoard(message, args) {
-	let data = JSON.parse(fs.readFileSync('./data/leaderboard.json', 'utf8'));
+	let data = JSON.parse(fs.readFileSync(leaderboardFile, 'utf8'));
 	
 	message.channel.send(formatLeaderboard(data));
 }
@@ -217,7 +218,7 @@ function formatLeaderboard(data) {
 }
 
 function sendRank(message, args) {
-	let data = JSON.parse(fs.readFileSync('./data/leaderboard.json', 'utf8'));
+	let data = JSON.parse(fs.readFileSync(leaderboardFile, 'utf8'));
 	let rank = data.records
 		.findIndex(val => val.username === message.author.username);
 
