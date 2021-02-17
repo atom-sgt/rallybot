@@ -1,0 +1,254 @@
+{
+	"classes": [
+		"H1 (FWD)",
+		"H2 (FWD)",
+		"H2 (RWD)",
+		"H3 (RWD)",
+		"Group B (RWD)",
+		"Group B (AWD)",
+		"R2",
+		"F2 Kit Car",
+		"Group A",
+		"R4",
+		"2000cc",
+		"R5",
+		"Rally GT"
+	],
+	"locations": [
+		{
+			"name": "Argentina",
+			"conditions": ["Wet", "Dry"],
+			"stages": [
+				"Las Juntas",
+				"Valle de los puentes",
+				"Camino de acantilados y rocas",
+				"San Isidro",
+				"Miraflores",
+				"El Rodeo",
+				"Camino a La Puerta",
+				"Valle de los puentes a la inversa",
+				"Camino de acantilados y rocas inverso",
+				"Camino a Coneta",
+				"Huillaprima",
+				"La Merced"
+			]
+		},
+		{
+			"name": "Australia",
+			"conditions": ["Wet", "Dry"],
+			"stages": [
+				"Mount Kaye Pass",
+				"Chandlers Creek",
+				"Bondi Forest",
+				"Rockton Plains",
+				"Yambulla Mountain Ascent",
+				"Noorinbee Ridge Ascent",
+				"Mount Kaye Pass Reverse",
+				"Chandlers Creek Reverse",
+				"Taylor Farm Sprint",
+				"Rockton Plains Reverse",
+				"Yambulla Mountain Descent",
+				"Noorinbee Ridge Descent"
+			]	
+		},
+		{
+			"name":"Finland",
+			"conditions": ["Wet", "Dry"],
+			"stages": [
+				"Kakaristo",
+				"Kontinjärvi",
+				"Kotajärvi",
+				"Iso Oksjärvi",
+				"Kailajärvi",
+				"Naarajärvi",
+				"Pitkäjärvi",
+				"Hämelahti",
+				"Oksala",
+				"Järvenkylä",
+				"Jyrkysjärvi",
+				"Paskuri"
+			]	
+		},
+		{ 
+			"name":"Germany",
+			"conditions": ["Wet", "Dry"],
+			"stages": [
+				"Oberstein",
+				"Hammerstein",
+				"Kreuzungsring",
+				"Verbundsring",
+				"Innerer Feld-Sprint",
+				"Waldaufstieg",
+				"Frauenberg",
+				"Ruschberg",
+				"Kreuzungsring reverse",
+				"Verbundsring Reverse",
+				"Innerer Feld-Sprint (umgekehrt)",
+				"Waldabstieg"
+			]	
+		},
+		{ 
+			"name":"Greece",
+			"conditions": ["Wet", "Dry"],
+			"stages": [
+				"Anodou Farmakas",
+				"Pomona Érixi",
+				"Koryfi Dafni",
+				"Perasma Platani",
+				"Ourea Spevsi",
+				"Abies Koiláda",
+				"Kathodo Leontiou",
+				"Fourkéta Kourva",
+				"Ampelonas Ormi",
+				"Tsiristra Théa",
+				"Pedines Epidaxi",
+				"Ypsona tou Dasos"
+			]	
+		},
+		{ 
+			"name":"Monaco",
+			"conditions": ["Dry"],
+			"stages": [
+				"Vallée descendante",
+				"Pra d’Alart",
+				"Col de Turini - Départ en descente",
+				"Gordolon - Courte montée",
+				"Col de Turini sprint en montée",
+				"Route de Turini Descente",
+				"Route de Turini",
+				"Col de Turini Départ",
+				"Route de Turini Montée",
+				"Col de Turini - Descente",
+				"Col de Turini - Sprint en descente",
+				"Approche du Col de Turini - Montée"
+			]	
+		},
+		{ 
+			"name":"New Zealand",
+			"conditions": ["Wet", "Dry"],
+			"stages": [
+				"Waimarama Point Forward",
+				"Te Awanga Forward",
+				"Waimarama Sprint Forward",
+				"Elsthorpe Sprint Forward",
+				"Ocean Beach Sprint Forward",
+				"Te Awanga Sprint Forward",
+				"Waimarama Point Reverse",
+				"Ocean Beach",
+				"Waimarama Sprint Reverse",
+				"Elsthorpe Sprint Reverse",
+				"Ocean Beach Sprint Reverse",
+				"Te Awanga Sprint Reverse"
+			]	
+		},
+		{ 
+			"name":"Poland",
+			"conditions": ["Wet", "Dry"],
+			"stages": [
+				"Zaróbka",
+				"Zienki",
+				"Marynka",
+				"Kopina",
+				"Lejno",
+				"Czarny Las",
+				"Zagórze",
+				"Jezioro Rotcze",
+				"Borysik",
+				"Józefin",
+				"Jagodno",
+				"Jezioro Lukie"
+			]	
+		},
+		{
+			"name":	"Scotland",
+			"conditions": ["Wet", "Dry"],
+			"stages": [
+				"Newhouse Bridge",
+				"South Morningside",
+				"Annbank Station",
+				"Rosebank Farm",
+				"Old Butterstone Muir",
+				"Glencastle Farm",
+				"Newhouse Bridge Reverse",
+				"South Morningside Reverse",
+				"Annbank Station Reverse",
+				"Rosebank Farm Reverse",
+				"Old Butterstone Muir Reverse",
+				"Glencastle Farm Reverse"
+			]	
+		},
+		{ 
+			"name":"Spain",
+			"conditions": ["Wet", "Dry"],
+			"stages": [
+				"Comienzo De Bellriu",
+				"Centenera",
+				"Ascenso por valle el Gualet",
+				"Viñedos dentro del valle Parra",
+				"Viñedos Dardenyà",
+				"Descenso por carretera",
+				"Final de Bellriu",
+				"Camino a Centenera",
+				"Salida desde Montverd",
+				"Ascenso bosque Montverd",
+				"Viñedos Dardenyà inversa",
+				"Subida por carretera"
+			]	
+		},
+		{ 
+			"name":"Sweden",
+			"conditions": ["Snow"],
+			"stages": [
+				"Hamra",
+				"Ransbysäter",
+				"Elgsjön",
+				"Stor-jangen Sprint",
+				"Älgsjön Sprint",
+				"Östra Hinnsjön",
+				"Lysvik",
+				"Norraskoga",
+				"Älgsjön",
+				"Stor-jangen Sprint Reverse",
+				"Skogsrallyt",
+				"Björklangen"
+			]	
+		},
+		{ 
+			"name":"USA",
+			"conditions": ["Wet", "Dry"],
+			"stages": [
+				"Beaver Creek Trail Forward",
+				"North Fork Pass",
+				"Hancock Creek Burst",
+				"Fuller Mountain Ascent",
+				"Tolt Valley Sprint Forward",
+				"Hancock Hill Sprint Forward",
+				"Beaver Creek Trail Reverse",
+				"North Fork Pass Reverse",
+				"Fury Lake Depart",
+				"Fuller Mountain Descent",
+				"Tolt Valley Sprint Reverse",
+				"Hancock Hill Sprint Reverse"
+			]	
+		},
+		{ 
+			"name":"Wales",
+			"conditions": ["Wet", "Dry"],
+			"stages": [
+				"River Severn Valley",
+				"Sweet Lamb",
+				"Fferm Wynt",
+				"Dyffryn Afon",
+				"Bidno Moorland",
+				"Pant Mawr",
+				"Bronfelen",
+				"Geufron Forest",
+				"Fferm Wynt Reverse",
+				"Dyffryn Afon Reverse",
+				"Bidno Moorland Reverse",
+				"Pant Mawr Reverse"
+			]	
+		}
+	]
+}
+
