@@ -1,0 +1,36 @@
+{
+	"servers": [
+		{
+			"id": 0,
+			"leaderboards": {
+				"daily": {
+					"challenge": "Example rule set",
+					"records": [{ 
+						"userId": 123,
+						"username": "sgt",
+						"time": 0,
+						"sourcePermalink": "example.com"
+					}]
+				},
+				"weekly": {
+					"challenge": "Example rule set",
+					"records": [{ 
+						"userId": 123,
+						"username": "sgt",
+						"time": 0,
+						"sourcePermalink": "example.com"
+					}]
+				},
+				"random": {
+					"challenge": "Example rule set",
+					"records": [{ 
+						"userId": 123,
+						"username": "sgt",
+						"time": 0,
+						"sourcePermalink": "example.com"
+					}]
+				}
+			}
+		}
+	]
+}

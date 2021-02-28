@@ -11,6 +11,7 @@ const debug = (message) =>  isDebug && log(message);
 // Data
 const { cars, groups, locales } = require('./data/dirt-rally-2-data.json');
 const leaderboardFile = './data/leaderboard.json';
+const dbFileName = './data/database.json';
 
 // Start Discord client
 const client = new Discord.Client();
