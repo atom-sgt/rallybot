@@ -311,6 +311,31 @@ function sendWeeklyBoard(message, args) {
 	let guildDb = getGuildLeaderboards(0);
 	message.channel.send(buildLeaderboardMessage(guildDb.leaderboards.weekly));
 }
+// HELPERS ////////////////////////////////////////////////////////////////////
+function formatTime(ms) {
+	// Convert
+	let minutes = Math.floor(ms / 60000);
+	let seconds = ((ms % 60000) / 1000).toFixed(0);
+	let milliseconds = ms % 1000;
+
+	// Padding
+	minutes = (minutes < 10) ? '0'+minutes : minutes;
+	seconds = (seconds < 10) ? '0'+seconds : seconds;
+
+	return `${minutes}:${seconds}.${milliseconds}`;
+}
+
+function timeToMs(time) {
+	let minutes = parseInt(time.match(/^\d+/)[0]);
+	let seconds = parseInt(time.match(/:\d/)[0].replace(/:/, ''));
+	let milliseconds = parseInt(time.match(/\.\d+/)[0].replace(/:/, ''));
+
+	milliseconds += seconds * 1000;
+	milliseconds += minutes * 60000;
+
+	return milliseconds;
+}
+
 function getServerIdFromMessage(message) {
 	log(message.guild.id);
 }
