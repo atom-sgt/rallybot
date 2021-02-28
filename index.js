@@ -57,8 +57,16 @@ function rallyBot(message, args) {
 			case 'weekly':
 				sendWeeklyBoard(message, args);
 				break;
+			// Data
+			case 'random':
+				parseRandom(message, args);
+				break;
+			case 'rank':
+				sendRank(message, args);
+				break;
+			// Board management
 			case 'new':
-				initBoard(message, args);
+				parseNew(message, args);
 				break;
 			case 'reset':
 				resetBoard(message, args);
@@ -69,15 +77,7 @@ function rallyBot(message, args) {
 			case 'remove':
 				removeRecord(message, args);
 				break;
-			case 'board':
-				sendBoard(message, args);
-				break;
-			case 'rank':
-				sendRank(message, args);
-				break;
-			case 'random':
-				parseRandom(message, args);
-				break;
+			// Other
 			case 'please':
 				logUserFeedback(message, args);
 				break;
@@ -90,20 +90,7 @@ function rallyBot(message, args) {
 	}
 }
 
-function sendHelpMessage(message) {
-	let helpMessage = "Hello, my name is rallybot. Here are some commands:" +
-		"\n`board` Show the current leaderboard." +
-		"\n`rank` Show your rank." +
-		"\n`new` Start a new leaderboard." +
-		"\n`reset` Reset all leaderboard times." +
-		"\n`add <0:00.000>` Add a time your time to the leaderboard." +
-		"\n`remove <rank | username>` Remove a time from the leaderboard." +
-		"\n`random` Show a random rally." +
-		"\n\nExample `!rallybot add 1:23.456`";
-
-	message.channel.send(helpMessage);
-}
-
+// OLD ////////////////////////////////////////////////////////////////////////
 function initBoard(message, args) {
 	let locale = locales.random();
 	let data = {
@@ -114,13 +101,6 @@ function initBoard(message, args) {
 		records: [],
 	};
 	
-	fs.writeFileSync(leaderboardFile, JSON.stringify(data));
-	sendBoard(message, args);
-}
-
-function resetBoard(message, args) {
-	let data = JSON.parse(fs.readFileSync(leaderboardFile, 'utf8'));
-	data.records = [];
 	fs.writeFileSync(leaderboardFile, JSON.stringify(data));
 	sendBoard(message, args);
 }
@@ -157,16 +137,6 @@ function addRecord(message, args) {
 		let rank = data.records.findIndex(val => val.username === username) + 1;
 		message.channel.send(buildAddTimeResponse(isPb, isNew, rank));
 	}
-}
-
-function buildAddTimeResponse(isPb, isNew, rank) {
-	let message = `Time added.  Your current rank is **#${rank}**.`;
-	if (!isNew && isPb) {
-		message += "\nA new personal best!";
-	}
-	// message += "\nType `!board` to view the leaderboard."; 
-
-	return message;
 }
 
 function removeRecord(message, args) {
@@ -216,23 +186,6 @@ function removeByUsername(message, username) {
 	}
 }
 
-function sendBoard(message, args) {
-	let data = JSON.parse(fs.readFileSync(leaderboardFile, 'utf8'));
-	
-	message.channel.send(formatLeaderboard(data));
-}
-
-function formatLeaderboard(data) {
-	let challenge = `${data.group} | ${data.stage} (${data.conditions}), ${data.locale}`;
-	let times = (data.records.length) ? data.records
-		.sort(sortFormattedTime)	
-		.map((rec, index) => `#${index+1}\t${rec.time} - ${rec.username}`)
-		.join('\n') :
-		"No records.";
-	
-	return `\`${challenge}\`\n\`\`\`${times}\`\`\``; 
-}
-
 function sendRank(message, args) {
 	let data = JSON.parse(fs.readFileSync(leaderboardFile, 'utf8'));
 	let rank = data.records
@@ -249,24 +202,51 @@ function sortFormattedTime(a, b) {
 	return parseFloat(a.time.replace(/:/, '')) > parseFloat(b.time.replace(/:/, '')) ? 1 : -1;
 }
 
-function logUserFeedback(message, args) {
-	console.log(args.join(' '));
+function parseNew(message, args) {
+	let opt = args.shift();
+
+	switch(opt) {
+		case 'daily':
+			// initDailyChallenge();
+			break;
+		case 'weekly':
+			// initWeeklyChallenge();
+			break;
+		case 'random':
+			// initRandomChallenge();
+			break;
+		default:
+			// TODO: Better help text on bad opt
+			sendHelpMessage();				
+	}
 }
 
-function randomRally() {
-	let group = groups.random();
-	let loc = locales.random();
-	let stage = loc.stages.random();
-	let conditions = loc.conditions.random();
-	
-	return `${group.name} | ${randomStage()}`;
+// HELP ///////////////////////////////////////////////////////////////////////
+function sendHelpMessage(message) {
+	let helpMessage = "Hello, my name is rallybot. Here are some commands:" +
+		"\n`board` Show the current leaderboard." +
+		"\n`rank` Show your rank." +
+		"\n`new` Start a new leaderboard." +
+		"\n`reset` Reset all leaderboard times." +
+		"\n`add <0:00.000>` Add a time your time to the leaderboard." +
+		"\n`remove <rank | username>` Remove a time from the leaderboard." +
+		"\n`random` Show a random rally." +
+		"\n\nExample `!rallybot add 1:23.456`";
+
+	message.channel.send(helpMessage);
 }
 
-function randomStage() {
-	let loc = locales.random();
-	return `${loc.stages.random()} (${loc.conditions.random()}), ${loc.name}`;
+// ADD ////////////////////////////////////////////////////////////////////////
+function buildAddTimeResponse(isPb, isNew, rank) {
+	let message = `Time added.  Your current rank is **#${rank}**.`;
+	if (!isNew && isPb) {
+		message += "\nA new personal best!";
+	}
+
+	return message;
 }
 
+// RANDOM /////////////////////////////////////////////////////////////////////
 function parseRandom(message, args) {
 	let opt = args.shift();
 	let response = '';
@@ -292,8 +272,23 @@ function parseRandom(message, args) {
 	message.channel.send(response);
 }
 
-function parseNew(message, args) {
+function randomRally() {
+	let group = groups.random();
+	let loc = locales.random();
+	let stage = loc.stages.random();
+	let conditions = loc.conditions.random();
 	
+	return `${group.name} | ${randomStage()}`;
+}
+
+function randomStage() {
+	let loc = locales.random();
+	return `${loc.stages.random()} (${loc.conditions.random()}), ${loc.name}`;
+}
+
+// REMOVE /////////////////////////////////////////////////////////////////////
+
+// BOARD PRINT ////////////////////////////////////////////////////////////////
 function buildLeaderboardMessage(board) {
 	let ranks = board.records.sort()
 		.map((rec, index) => `#${index+1}\t${formatTime(rec.time)} - ${rec.username}`)
@@ -311,6 +306,12 @@ function sendWeeklyBoard(message, args) {
 	let guildDb = getGuildLeaderboards(0);
 	message.channel.send(buildLeaderboardMessage(guildDb.leaderboards.weekly));
 }
+
+// OTHER COMMANDS /////////////////////////////////////////////////////////////
+function logUserFeedback(message, args) {
+	log(args.join(' '));
+}
+
 // HELPERS ////////////////////////////////////////////////////////////////////
 function formatTime(ms) {
 	// Convert
