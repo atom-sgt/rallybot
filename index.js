@@ -3,7 +3,7 @@ const fs = require('fs');
 const { token } = require('./client.json');
 const { prefix } = require('./config.json');
 // Data
-const { groups, locales } = require('./data/dirt-rally-2-data.json');
+const { cars, groups, locales } = require('./data/dirt-rally-2-data.json');
 const leaderboardFile = './data/leaderboard.json';
 
 // Start Discord client
@@ -21,8 +21,6 @@ function commandListener(message) {
 	// Parse command
 	const args = message.content.slice(prefix.length).trim().split(/ +/);
 	const botCommand = args.shift().toLowerCase();
-	console.log("COMMAND:", botCommand, args);
-	// console.log(message);
 
 	// Forward command
 	switch(botCommand) {
@@ -33,6 +31,8 @@ function commandListener(message) {
 }
 
 function rallyBot(message, args) {
+	console.log("COMMAND:", args);
+
 	// Skip no args, send help text
 	if(!args.length) {
 		sendHelpMessage(message);
@@ -62,7 +62,7 @@ function rallyBot(message, args) {
 				sendRank(message, args);
 				break;
 			case 'random':
-				message.channel.send(randomRally());
+				parseRandom(message, args);
 				break;
 			case 'please':
 				logUserFeedback(message, args);
@@ -244,8 +244,42 @@ function randomRally() {
 	let loc = locales.random();
 	let stage = loc.stages.random();
 	let conditions = loc.conditions.random();
+	
+	return `${group.name} | ${randomStage()}`;
+}
 
-	return `${group} | ${stage} (${conditions}), ${loc.name}`;
+function randomStage() {
+	let loc = locales.random();
+	return `${loc.stages.random()} (${loc.conditions.random()}), ${loc.name}`;
+}
+
+function parseRandom(message, args) {
+	let opt = args.shift();
+	let response = '';
+	switch (opt) {
+		case 'car':
+			response = cars.random().name;
+			break;
+		case 'stage':
+			response = randomStage();
+			break;
+		case 'location':
+		case 'locale':
+			response = locales.random().name
+			break;
+		case 'class':
+		case 'group':
+			response = groups.random().name;
+			break;
+		default:
+			response = randomRally();
+	}
+
+	message.channel.send(response);
+}
+
+function parseNew(message, args) {
+	
 }
 
 Array.prototype.random = function() {
