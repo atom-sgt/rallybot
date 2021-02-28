@@ -2,6 +2,12 @@ const Discord = require('discord.js');
 const fs = require('fs');
 const { token } = require('./client.json');
 const { prefix } = require('./config.json');
+
+// Logging shortcuts
+const isDebug = true;
+const log = console.log;
+const debug = (message) =>  isDebug && log(message);
+
 // Data
 const { cars, groups, locales } = require('./data/dirt-rally-2-data.json');
 const leaderboardFile = './data/leaderboard.json';
