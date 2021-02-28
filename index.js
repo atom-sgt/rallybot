@@ -49,6 +49,13 @@ function rallyBot(message, args) {
 	try {
 		let command = args.shift();
 		switch(command) {
+			// Print Board 
+			case 'daily':
+				sendDailyBoard(message, args);
+				break;
+			case 'weekly':
+				sendWeeklyBoard(message, args);
+				break;
 			case 'new':
 				initBoard(message, args);
 				break;
@@ -286,6 +293,37 @@ function parseRandom(message, args) {
 
 function parseNew(message, args) {
 	
+function buildLeaderboardMessage(board) {
+	let ranks = board.records.sort()
+		.map((rec, index) => `#${index+1}\t${formatTime(rec.time)} - ${rec.username}`)
+		.join('\n');
+
+	return `\`${board.challenge}\`\n\`\`\`${ranks}\`\`\``; 
+}
+
+function sendDailyBoard(message, args) {
+	let guildDb = getGuildLeaderboards(0);
+	message.channel.send(buildLeaderboardMessage(guildDb.leaderboards.daily));
+}
+
+function sendWeeklyBoard(message, args) {
+	let guildDb = getGuildLeaderboards(0);
+	message.channel.send(buildLeaderboardMessage(guildDb.leaderboards.weekly));
+}
+function getServerIdFromMessage(message) {
+	log(message.guild.id);
+}
+
+function getGuildLeaderboards(guildId) {
+	return getDb().servers.find((guild) => guild.id === guildId);
+}
+
+function getDb() {	
+	return JSON.parse(fs.readFileSync(dbFileName, 'utf8'));
+}
+
+function saveDb() {
+	// fs.writeFileSync(dbFileName, JSON.stringify(data));
 }
 
 Array.prototype.random = function() {
