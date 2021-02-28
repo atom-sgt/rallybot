@@ -3,7 +3,7 @@ const fs = require('fs');
 const { token } = require('./client.json');
 const { prefix } = require('./config.json');
 // Data
-const { classes, locations } = require('./data/dr2.json');
+const { groups, locales } = require('./data/dirt-rally-2-data.json');
 const leaderboardFile = './data/leaderboard.json';
 
 // Start Discord client
@@ -91,9 +91,9 @@ function sendHelpMessage(message) {
 }
 
 function initBoard(message, args) {
-	let locale = locations.random();
+	let locale = locales.random();
 	let data = {
-		carClass: classes.random(),
+		group: groups.random(),
 		conditions: locale.conditions.random(), 
 		locale: locale.name,
 		stage: locale.stages.random(),
@@ -101,12 +101,14 @@ function initBoard(message, args) {
 	};
 	
 	fs.writeFileSync(leaderboardFile, JSON.stringify(data));
+	sendBoard(message, args);
 }
 
 function resetBoard(message, args) {
 	let data = JSON.parse(fs.readFileSync(leaderboardFile, 'utf8'));
 	data.records = [];
 	fs.writeFileSync(leaderboardFile, JSON.stringify(data));
+	sendBoard(message, args);
 }
 
 function addRecord(message, args) {
@@ -207,7 +209,7 @@ function sendBoard(message, args) {
 }
 
 function formatLeaderboard(data) {
-	let challenge = `${data.carClass} | ${data.stage} (${data.conditions}), ${data.locale}`;
+	let challenge = `${data.group} | ${data.stage} (${data.conditions}), ${data.locale}`;
 	let times = (data.records.length) ? data.records
 		.sort(sortFormattedTime)	
 		.map((rec, index) => `#${index+1}\t${rec.time} - ${rec.username}`)
@@ -238,12 +240,12 @@ function logUserFeedback(message, args) {
 }
 
 function randomRally() {
-	let carClass = classes.random();
-	let loc = locations.random();
+	let group = groups.random();
+	let loc = locales.random();
 	let stage = loc.stages.random();
 	let conditions = loc.conditions.random();
 
-	return `${carClass} | ${stage} (${conditions}), ${loc.name}`;
+	return `${group} | ${stage} (${conditions}), ${loc.name}`;
 }
 
 Array.prototype.random = function() {
