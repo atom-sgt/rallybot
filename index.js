@@ -224,14 +224,9 @@ function parseNew(message, args) {
 // HELP ///////////////////////////////////////////////////////////////////////
 function sendHelpMessage(message) {
 	let helpMessage = "Hello, my name is rallybot. Here are some commands:" +
-		"\n`board` Show the current leaderboard." +
-		"\n`rank` Show your rank." +
-		"\n`new` Start a new leaderboard." +
-		"\n`reset` Reset all leaderboard times." +
-		"\n`add <0:00.000>` Add a time your time to the leaderboard." +
-		"\n`remove <rank | username>` Remove a time from the leaderboard." +
-		"\n`random` Show a random rally." +
-		"\n\nExample `!rallybot add 1:23.456`";
+		"\n`<daily|weekly>` Show the current leaderboard for the given challenge" +
+		"\n`random <car|class|locale|stage>` Show a random rally." + 
+		"\n`new <daily|weekly>` Start a new challenge.";
 
 	message.channel.send(helpMessage);
 }
