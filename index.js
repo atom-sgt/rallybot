@@ -49,8 +49,11 @@ function rallyBot(message, args) {
 	// Parse command
 	try {
 		let command = args.shift();
-		switch(command) {
-			// Print Board 
+		switch(command) {				
+			// Print Board
+			case 'board': 
+				log(getGuildLeaderboards(getGuildId(message)));
+				break;
 			case 'daily':
 				sendDailyBoard(message, args);
 				break;
@@ -72,7 +75,8 @@ function rallyBot(message, args) {
 				resetBoard(message, args);
 				break;
 			case 'add':
-				addRecord(message, args);
+				parseAdd(message, args);
+				// addRecord(message, args);
 				break;
 			case 'remove':
 				removeRecord(message, args);
@@ -228,17 +232,68 @@ function sendHelpMessage(message) {
 		"\n`random <car|class|locale|stage>` Show a random rally." + 
 		"\n`new <daily|weekly>` Start a new challenge.";
 
+	// TODO: Better command examples / format
 	message.channel.send(helpMessage);
 }
 
 // ADD ////////////////////////////////////////////////////////////////////////
-function buildAddTimeResponse(isPb, isNew, rank) {
-	let message = `Time added.  Your current rank is **#${rank}**.`;
-	if (!isNew && isPb) {
-		message += "\nA new personal best!";
+function parseAdd(message, args) {
+	let target = args.shift();
+	let time = args.shift();
+	let username = message.author.username;
+
+	// TODO: Validate time
+
+	switch(target) {
+		case 'daily':
+			addDailyTime(message, timeToMs(time));
+			break;
+		case 'weekly':
+			addWeeklyTime(message, timeToMs(time));
+			break;
+		default:
+			sendHelpMessage();
+	}
+}
+
+function addDailyTime(message, time) {
+	// Get data
+	let username = message.author.username;
+	let userId = message.author.userId;
+	// TODO: let proof = attached file
+	let leaderboards = getGuildLeaderboards(getGuildId(message)).daily;
+	let newRecord = { userId, username, time, proof };
+	let oldRecord = leaderboards.daily.records.find((record) => record.userId === userId);
+
+	// Determine if new best
+	let rank = 'unranked';
+	let isNew = !oldRecord;
+	let isBest = isNew || newRecord.time < oldRecord.time;
+	if (isBest) {
+		// Replace old
+		leaderboards.daily = leaderboards.daily
+			.filter((record) => record.userId !== userId)
+			.push(newRecord)
+			.sort();
+		rank = leaderboards.daily.findIndex((record) => record.userId === userId);
+
+		// Save
+		saveGuildBoards(leaderboards);
 	}
 
-	return message;
+	// Determine message
+	if(isNew) {
+		message.channel.send(`Time added.  Your rank is ${rank}`);
+	} else if (isBest) {
+		message.channel.send(`Time added.  Your new rank is ${rank}.\nCongratulations on the new personal best!`);
+	} else {
+		message.channel.send(`You failed to beat your previous best of \`${formatTime(oldRecord.time)}\``);
+	}
+}
+
+function addWeeklyTime(guildId, time) {
+	message.channel.send(`Not ready yet.`);
+	// TODO: Just use one func and pass in the appropriate leaderboards and guildId
 }
 
 // RANDOM /////////////////////////////////////////////////////////////////////
@@ -293,12 +348,12 @@ function buildLeaderboardMessage(board) {
 }
 
 function sendDailyBoard(message, args) {
-	let guildDb = getGuildLeaderboards(0);
+	let guildDb = getGuildLeaderboards(getGuildId(message));
 	message.channel.send(buildLeaderboardMessage(guildDb.leaderboards.daily));
 }
 
 function sendWeeklyBoard(message, args) {
-	let guildDb = getGuildLeaderboards(0);
+	let guildDb = getGuildLeaderboards(getGuildId(message));
 	message.channel.send(buildLeaderboardMessage(guildDb.leaderboards.weekly));
 }
 
@@ -307,7 +362,7 @@ function logUserFeedback(message, args) {
 	log(args.join(' '));
 }
 
-// HELPERS ////////////////////////////////////////////////////////////////////
+// UTILS //////////////////////////////////////////////////////////////////////
 function formatTime(ms) {
 	// Convert
 	let minutes = Math.floor(ms / 60000);
@@ -317,6 +372,8 @@ function formatTime(ms) {
 	// Padding
 	minutes = (minutes < 10) ? '0'+minutes : minutes;
 	seconds = (seconds < 10) ? '0'+seconds : seconds;
+	
+	// TODO: Test this
 
 	return `${minutes}:${seconds}.${milliseconds}`;
 }
@@ -329,23 +386,56 @@ function timeToMs(time) {
 	milliseconds += seconds * 1000;
 	milliseconds += minutes * 60000;
 
+	// TODO: Test this
 	return milliseconds;
 }
 
-function getServerIdFromMessage(message) {
-	log(message.guild.id);
+function buildGuild(guildId) {
+	// TODO: Better record init
+	return {
+		id: guildId,
+		leaderboards: {
+			daily: {},
+			weekly: {},
+			random: {},
+		}
+	};
+}
+
+function getGuildId(message) {
+	return message.channel.guild.id;
 }
 
 function getGuildLeaderboards(guildId) {
-	return getDb().servers.find((guild) => guild.id === guildId);
+	let guild = getDb().guilds.find((guild) => guild.id === guildId);
+
+	if (!guild) {
+		//guild = buildGuild(guildId); 
+		guild = getDb().guilds.find((guild) => guild.id === 0);
+	}
+
+	return guild;
+}
+
+function saveGuildBoards(newBoards) {
+	let db = getDb();
+	let guildBoards = db.guilds.find((guild) => guild.id === newBoards.id);
+
+	// TODO: Test if this works by ref 
+	guildBoards = newBoards;
+
+	saveDb(db);
 }
 
 function getDb() {	
-	return JSON.parse(fs.readFileSync(dbFileName, 'utf8'));
+	debug('LOAD');
+	let db = JSON.parse(fs.readFileSync(dbFileName, 'utf8'));
+	debug(db);
+	return db;
 }
 
-function saveDb() {
-	// fs.writeFileSync(dbFileName, JSON.stringify(data));
+function saveDb(db) {
+	fs.writeFileSync(dbFileName, JSON.stringify(db));
 }
 
 Array.prototype.random = function() {
