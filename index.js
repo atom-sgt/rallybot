@@ -4,7 +4,7 @@ const { token } = require('./client.json');
 const { prefix } = require('./config.json');
 
 // Logging shortcuts
-const isDebug = true;
+const isDebug = false;
 const log = console.log;
 const debug = (message) =>  isDebug && log(message);
 
@@ -38,7 +38,8 @@ function commandListener(message) {
 }
 
 function rallyBot(message, args) {
-	console.log("COMMAND:", args);
+	log("COMMAND:", args);
+	// log(message);
 
 	// Skip no args, send help text
 	if(!args.length) {
@@ -52,7 +53,7 @@ function rallyBot(message, args) {
 		switch(command) {				
 			// Print Board
 			case 'board': 
-				log(getGuildLeaderboards(getGuildId(message)));
+				log(getGuildData(getGuildId(message)));
 				break;
 			case 'daily':
 				sendDailyBoard(message, args);
@@ -182,7 +183,7 @@ function removeByUsername(message, username) {
 			.filter(rec => rec.username !== username);
 
 		// Write new records
-		fs.writeFileSync(leaderboardFil, JSON.stringify(data));
+		fs.writeFileSync(leaderboardFile, JSON.stringify(data));
 
 		message.channel.send("Record removed.");
 	} else {
@@ -257,13 +258,19 @@ function parseAdd(message, args) {
 }
 
 function addDailyTime(message, time) {
+	// End if no daily board
+	let guildId = getGuildId(message);
+	let guildData = getGuildData(guildId);
+	if (!guildData.daily) {
+		return message.channel.send("There's no active daily challenge.");
+	}
+	
 	// Get data
 	let username = message.author.username;
-	let userId = message.author.userId;
-	// TODO: let proof = attached file
-	let leaderboards = getGuildLeaderboards(getGuildId(message)).daily;
-	let newRecord = { userId, username, time, proof };
-	let oldRecord = leaderboards.daily.records.find((record) => record.userId === userId);
+	let userId = message.author.id;
+	let proof = 'www.example.com';
+	let newRecord = { id: userId, username, time, proof };
+	let oldRecord = guildData.daily.records.find((record) => record.id === userId);
 
 	// Determine if new best
 	let rank = 'unranked';
@@ -271,21 +278,21 @@ function addDailyTime(message, time) {
 	let isBest = isNew || newRecord.time < oldRecord.time;
 	if (isBest) {
 		// Replace old
-		leaderboards.daily = leaderboards.daily
-			.filter((record) => record.userId !== userId)
-			.push(newRecord)
-			.sort();
-		rank = leaderboards.daily.findIndex((record) => record.userId === userId);
+		guildData.daily.records = guildData.daily.records
+			.filter((record) => record.id !== userId)
+		guildData.daily.records.push(newRecord);
+		rank = guildData.daily.records.sort().findIndex((record) => record.id === userId) + 1;
 
 		// Save
-		saveGuildBoards(leaderboards);
+		log('Adding new record:', newRecord);
+		saveGuildData(guildId, guildData);
 	}
 
 	// Determine message
 	if(isNew) {
-		message.channel.send(`Time added.  Your rank is ${rank}`);
+		message.channel.send(`Time added.  Your rank is **#${rank}**`);
 	} else if (isBest) {
-		message.channel.send(`Time added.  Your new rank is ${rank}.\nCongratulations on the new personal best!`);
+		message.channel.send(`Time added.  Your new rank is **#${rank}**.\nCongratulations on the new personal best!`);
 	} else {
 		message.channel.send(`You failed to beat your previous best of \`${formatTime(oldRecord.time)}\``);
 	}
@@ -348,18 +355,18 @@ function buildLeaderboardMessage(board) {
 }
 
 function sendDailyBoard(message, args) {
-	let guildDb = getGuildLeaderboards(getGuildId(message));
-	message.channel.send(buildLeaderboardMessage(guildDb.leaderboards.daily));
+	let data = getGuildData(getGuildId(message));
+	message.channel.send(buildLeaderboardMessage(data.daily));
 }
 
 function sendWeeklyBoard(message, args) {
-	let guildDb = getGuildLeaderboards(getGuildId(message));
-	message.channel.send(buildLeaderboardMessage(guildDb.leaderboards.weekly));
+	let guildDb = getGuildData(getGuildId(message));
+	message.channel.send(buildLeaderboardMessage(guildDb.data.weekly));
 }
 
 // OTHER COMMANDS /////////////////////////////////////////////////////////////
 function logUserFeedback(message, args) {
-	log(args.join(' '));
+	log('FEEDBACK:', args.join(' '));
 }
 
 // UTILS //////////////////////////////////////////////////////////////////////
@@ -373,31 +380,36 @@ function formatTime(ms) {
 	minutes = (minutes < 10) ? '0'+minutes : minutes;
 	seconds = (seconds < 10) ? '0'+seconds : seconds;
 	
-	// TODO: Test this
-
 	return `${minutes}:${seconds}.${milliseconds}`;
 }
 
 function timeToMs(time) {
 	let minutes = parseInt(time.match(/^\d+/)[0]);
 	let seconds = parseInt(time.match(/:\d/)[0].replace(/:/, ''));
-	let milliseconds = parseInt(time.match(/\.\d+/)[0].replace(/:/, ''));
+	let milliseconds = parseInt(time.match(/\.\d+/)[0].replace(/\./, ''));
 
 	milliseconds += seconds * 1000;
 	milliseconds += minutes * 60000;
 
-	// TODO: Test this
 	return milliseconds;
 }
 
 function buildGuild(guildId) {
-	// TODO: Better record init
 	return {
 		id: guildId,
-		leaderboards: {
-			daily: {},
-			weekly: {},
-			random: {},
+		data: {
+			daily: {
+				challenge: 'No challenge set',
+				records: [],
+			},
+			weekly: {
+				challenge: 'No challenge set',
+				records: [],
+			},
+			random: {
+				challenge: 'No challenge set',
+				records: [],
+			},
 		}
 	};
 }
@@ -406,35 +418,43 @@ function getGuildId(message) {
 	return message.channel.guild.id;
 }
 
-function getGuildLeaderboards(guildId) {
-	let guild = getDb().guilds.find((guild) => guild.id === guildId);
+function getGuildData(guildId) {
+	let db = getDb();
+	let guild = db.guilds.find((guild) => guild.id === guildId);
+	let guildIndex = db.guilds.findIndex((dbGuild) => dbGuild.id === guildId);
 
 	if (!guild) {
-		//guild = buildGuild(guildId); 
-		guild = getDb().guilds.find((guild) => guild.id === 0);
+		guild = buildGuild(guildId);
 	}
-
-	return guild;
+	
+	return guild.data;
 }
 
-function saveGuildBoards(newBoards) {
+function saveGuildData(guildId, guildData) {
 	let db = getDb();
-	let guildBoards = db.guilds.find((guild) => guild.id === newBoards.id);
-
-	// TODO: Test if this works by ref 
-	guildBoards = newBoards;
+	let guildIndex = db.guilds.findIndex((dbGuild) => dbGuild.id === guildId);
+	
+	if (guildIndex === -1) {
+		// Push new guild
+		let guild = buildGuild(guildId);
+		guild.data = guildData;
+		db.guilds.push(guild);
+	} else {
+		// Overwrite existing guild data
+		db.guilds[guildIndex] = guildData;
+	}
 
 	saveDb(db);
 }
 
 function getDb() {	
-	debug('LOAD');
 	let db = JSON.parse(fs.readFileSync(dbFileName, 'utf8'));
-	debug(db);
+	debug('READ:', db);
 	return db;
 }
 
 function saveDb(db) {
+	debug('WRITE:', db);
 	fs.writeFileSync(dbFileName, JSON.stringify(db));
 }
 
