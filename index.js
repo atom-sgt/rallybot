@@ -52,7 +52,8 @@ function rallyBot(message, args) {
 		let command = args.shift();
 		switch(command) {				
 			// Print Board
-			case 'board': 
+			case 'guild': 
+			case 'server': 
 				log(getGuildData(getGuildId(message)));
 				break;
 			case 'daily':
@@ -66,21 +67,21 @@ function rallyBot(message, args) {
 				parseRandom(message, args);
 				break;
 			case 'rank':
-				sendRank(message, args);
+			case 'ranks':
+				// sendRanks(message, args);
 				break;
 			// Board management
 			case 'new':
 				parseNew(message, args);
 				break;
 			case 'reset':
-				resetBoard(message, args);
+				resetRecords(message, args);
 				break;
 			case 'add':
 				parseAdd(message, args);
-				// addRecord(message, args);
 				break;
 			case 'remove':
-				removeRecord(message, args);
+				parseRemove(message, args);
 				break;
 			// Other
 			case 'please':
@@ -95,118 +96,7 @@ function rallyBot(message, args) {
 	}
 }
 
-// OLD ////////////////////////////////////////////////////////////////////////
-function initBoard(message, args) {
-	let locale = locales.random();
-	let data = {
-		group: groups.random(),
-		conditions: locale.conditions.random(), 
-		locale: locale.name,
-		stage: locale.stages.random(),
-		records: [],
-	};
-	
-	fs.writeFileSync(leaderboardFile, JSON.stringify(data));
-	sendBoard(message, args);
-}
-
-function addRecord(message, args) {
-	// Skip no time 
-	if(!args.length) {
-		message.channel.send("Please specify a time to add.");
-	}
-	
-	let username = message.author.username;
-	let newTime = args.shift();
-	let timeFormat = /\d+:\d{2}([.]\d{1,3})?/;
-	
-	if(newTime.match(timeFormat)) {
-		let data = JSON.parse(fs.readFileSync(leaderboardFile, 'utf8'));
-
-		// Find, compare, and replace user time(s)
-		let userRecord = data.records.filter(rec => rec.username === username)
-		let isNew = !userRecord.length;
-		userRecord.push({ username, time:newTime })
-		userRecord = userRecord.sort(sortFormattedTime)[0];
-
-		// Add user time to records
-		data.records = data.records
-			.filter(rec => rec.username !== username)
-			.concat(userRecord)
-			.sort(sortFormattedTime);
-
-		// Write new records
-		fs.writeFileSync(leaderboardFile, JSON.stringify(data));
-
-		let isPb = userRecord.time === newTime;
-		let rank = data.records.findIndex(val => val.username === username) + 1;
-		message.channel.send(buildAddTimeResponse(isPb, isNew, rank));
-	}
-}
-
-function removeRecord(message, args) {
-	// Skip no target
-	if(!args.length) {
-		message.channel.send("Please specify a record to remove.");
-	}
-
-	let target = args.shift();
-	if(target.match(/^#?\d/)) {
-		removeByRank(message, target.match(/\d+/));
-	} else {
-		removeByUsername(message, target);
-	}
-}
-
-function removeByRank(message, rank) {
-	let data = JSON.parse(fs.readFileSync('./data/leaderboard.json', 'utf8'));
-	
-	if(rank >= 0 && rank < data.records.length) {
-		data.records.splice(rank-1, 1);
-		fs.writeFileSync('./data/leaderboard.json', JSON.stringify(data));
-		
-		message.channel.send(`Record ${rank} has been removed.`);
-	} else {
-		message.channel.send(`No record found for target rank.`);
-	}
-}
-
-function removeByUsername(message, username) {
-	let data = JSON.parse(fs.readFileSync(leaderboardFile, 'utf8'));
-	
-	// Remove leading @
-	username = username.replace(/^@/, '');
-
-	if(data.records.findIndex(val => val.username === username) !== -1) {
-		// Filter records w/ username
-		data.records = data.records
-			.filter(rec => rec.username !== username);
-
-		// Write new records
-		fs.writeFileSync(leaderboardFile, JSON.stringify(data));
-
-		message.channel.send("Record removed.");
-	} else {
-		message.channel.send("No record found for target user.");
-	}
-}
-
-function sendRank(message, args) {
-	let data = JSON.parse(fs.readFileSync(leaderboardFile, 'utf8'));
-	let rank = data.records
-		.findIndex(val => val.username === message.author.username);
-
-	if(rank !== -1) {
-		message.channel.send(`You are ranked **#${rank + 1}**.`);
-	} else {
-		message.channel.send("You do not have a rank.");
-	}
-}
-
-function sortFormattedTime(a, b) {
-	return parseFloat(a.time.replace(/:/, '')) > parseFloat(b.time.replace(/:/, '')) ? 1 : -1;
-}
-
+// NEW ////////////////////////////////////////////////////////////////////////
 function parseNew(message, args) {
 	let opt = args.shift();
 
@@ -223,6 +113,21 @@ function parseNew(message, args) {
 		default:
 			// TODO: Better help text on bad opt
 			sendHelpMessage();				
+	}
+}
+
+function resetRecords(message, args) {
+	let targetBoard = args.shift();
+
+	let guildId = getGuildId(message);
+	let guildData = getGuildData(guildId);
+	if (!guildData[targetBoard]) {
+		message.channel.send('No challenge exists by that name.');
+	} else {
+		guildData[targetBoard].records = [];
+		saveGuildData(guildId, guildData);
+
+		message.channel.send(`Records reset for ${targetBoard}.`);
 	}
 }
 
@@ -344,12 +249,67 @@ function randomStage() {
 }
 
 // REMOVE /////////////////////////////////////////////////////////////////////
+function parseRemove(message, args) {
+	let targetBoard = args.shift();
+	let targetRecord = args.shift();
+
+	// Get challenge data
+	let guildId = getGuildId(message);
+	let guildData = getGuildData(guildId);
+	if (!guildData[targetBoard]) {
+		return message.channel.send("No challenge exists by that name.");
+	}
+
+	// Remove
+	if(targetRecord.match(/^#?\d/)) {
+		removeByRank(message, targetRecord.match(/\d+/)[0], targetBoard, guildId, guildData);
+	} else {
+		// Assume username if not all digits
+		removeByUsername(message, targetRecord, targetBoard, guildId, guildData);
+	}
+}
+
+function removeByRank(message, rank, targetBoard, guildId, guildData) {
+	log('Removing rank:', targetBoard, rank, guildData[targetBoard].records.length);
+	if(rank >= 0 && rank <= guildData[targetBoard].records.length) {
+		guildData[targetBoard].records.slice(rank-1, 1);
+		saveGuildData(guildId, guildData);
+
+		message.channel.send(`Record ${rank} has been removed.`);
+	} else {
+		message.channel.send(`No record found for the specified rank.`);
+	}
+}
+
+function removeByUsername(message, username, targetBoard, guildId, guildData) {
+	log('Removing user:', targetBoard, username);
+	let challenge = guildData[targetBoard];
+	
+	// Sanitize name
+	username = username.replace(/^@/, '');
+
+	if(challenge.records.findIndex(val => val.username === username) !== -1) {
+		// Filter records w/ username
+		challenge.records = challenge.records
+			.filter(rec => rec.username !== username);
+		guildData[targetBoard] = challenge;
+
+		// Write new records
+		saveGuildData(guildId, guildData);
+
+		message.channel.send(`${username} has been removed from ${targetBoard} records.`);
+	} else {
+		message.channel.send("No record found for that user.");
+	}
+}
 
 // BOARD PRINT ////////////////////////////////////////////////////////////////
 function buildLeaderboardMessage(board) {
-	let ranks = board.records.sort()
-		.map((rec, index) => `#${index+1}\t${formatTime(rec.time)} - ${rec.username}`)
-		.join('\n');
+	let ranks = (board.records.length) ? 
+		board.records.sort()
+			.map((rec, index) => `#${index+1}\t${formatTime(rec.time)} - ${rec.username}`)
+			.join('\n') :
+		"No records"
 
 	return `\`${board.challenge}\`\n\`\`\`${ranks}\`\`\``; 
 }
