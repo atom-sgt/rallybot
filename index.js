@@ -131,17 +131,6 @@ function resetRecords(message, args) {
 	}
 }
 
-// HELP ///////////////////////////////////////////////////////////////////////
-function sendHelpMessage(message) {
-	let helpMessage = "Hello, my name is rallybot. Here are some commands:" +
-		"\n`<daily|weekly>` Show the current leaderboard for the given challenge" +
-		"\n`random <car|class|locale|stage>` Show a random rally." + 
-		"\n`new <daily|weekly>` Start a new challenge.";
-
-	// TODO: Better command examples / format
-	message.channel.send(helpMessage);
-}
-
 // ADD ////////////////////////////////////////////////////////////////////////
 function parseAdd(message, args) {
 	let target = args.shift();
@@ -322,6 +311,18 @@ function sendDailyBoard(message, args) {
 function sendWeeklyBoard(message, args) {
 	let guildDb = getGuildData(getGuildId(message));
 	message.channel.send(buildLeaderboardMessage(guildDb.data.weekly));
+}
+
+// HELP ///////////////////////////////////////////////////////////////////////
+function sendHelpMessage(message) {
+	let helpMessage = "Hello, my name is rallybot. Here are some commands:" +
+		"\n`!rallybot <daily|weekly>` Show the current leaderboard for the given challenge" +
+		"\n`!rallybot add <daily|weekly> <0:00.000>` Add record to given challenge." + 
+		"\n`!rallybot remove <daily|weekly> <rank|user>` Remove record from given challenge." + 
+		"\n`!rallybot random <car|class|locale|stage>` Show random data." + 
+		"\nExample:\n\`\`\`!rallybot add daily 1:23.456\`\`\`";
+
+	message.channel.send(helpMessage);
 }
 
 // OTHER COMMANDS /////////////////////////////////////////////////////////////
