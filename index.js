@@ -73,6 +73,9 @@ function rallyBot(message, args) {
 			case 'new':
 				parseNew(message, args);
 				break;
+			case 'set':
+				setChallenge(message, args);
+				break;
 			case 'reset':
 				resetRecords(message, args);
 				break;
@@ -112,6 +115,21 @@ function parseNew(message, args) {
 		default:
 			// TODO: Better help text on bad opt
 			sendHelpMessage();				
+	}
+}
+
+function setChallenge(message, args) {
+	let target = args.shift();
+
+	let guildId = getGuildId(message);
+	let guildData = getGuildData(guildId);
+	
+	if (!guildData[target]) {
+		message.channel.send("Not challenge exists by that name");
+	} else {
+		guildData[target].challenge = args.join(' ');
+		saveGuildData(guildId, guildData);
+		message.channel.send(`Challenge updated.`);
 	}
 }
 
