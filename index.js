@@ -4,13 +4,12 @@ const { token } = require('./client.json');
 const { prefix } = require('./config.json');
 
 // Logging shortcuts
-const isDebug = false;
+const isDebug = true;
 const log = console.log;
 const debug = (message) =>  isDebug && log(message);
 
 // Data
 const { cars, groups, locales } = require('./data/dirt-rally-2-data.json');
-const leaderboardFile = './data/leaderboard.json';
 const dbFileName = './data/database.json';
 
 // Start Discord client
@@ -259,9 +258,9 @@ function parseRemove(message, args) {
 }
 
 function removeByRank(message, rank, targetBoard, guildId, guildData) {
-	log('Removing rank:', targetBoard, rank, guildData[targetBoard].records.length);
+	log('Removing rank:', guildId, targetBoard, rank);
 	if(rank >= 0 && rank <= guildData[targetBoard].records.length) {
-		guildData[targetBoard].records.slice(rank-1, 1);
+		guildData[targetBoard].records.slice(rank - 1, 1);
 		saveGuildData(guildId, guildData);
 
 		message.channel.send(`Record ${rank} has been removed.`);
@@ -309,14 +308,30 @@ function sendDailyBoard(message, args) {
 }
 
 function sendWeeklyBoard(message, args) {
-	let guildDb = getGuildData(getGuildId(message));
-	message.channel.send(buildLeaderboardMessage(guildDb.data.weekly));
+	let data = getGuildData(getGuildId(message));
+	message.channel.send(buildLeaderboardMessage(data.weekly));
+}
+
+function sendRanks(message, args) {
+	let guildData = getGuildData(getGuildId(message));
+	let ranks = guildData.map((challenge) => {
+		let index = challenge.records.findIndex((record) => 
+			record.username === message.author.username);
+		if(index !== -1) {
+			return `${challenge.id}: #${index + 1}`;
+		}
+	});
+
+	if(ranks.length) {
+		message.channel.send(`\`\`\`${ranks.join('\n')}\`\`\``);
+	}
 }
 
 // HELP ///////////////////////////////////////////////////////////////////////
 function sendHelpMessage(message) {
 	let helpMessage = "Hello, my name is rallybot. Here are some commands:" +
 		"\n`!rallybot <daily|weekly>` Show the current leaderboard for the given challenge" +
+		"\n`!rallybot set <daily|weekly> <description> Set the description for a given challenge" +
 		"\n`!rallybot add <daily|weekly> <0:00.000>` Add record to given challenge." + 
 		"\n`!rallybot remove <daily|weekly> <rank|user>` Remove record from given challenge." + 
 		"\n`!rallybot random <car|class|locale|stage>` Show random data." + 
@@ -399,23 +414,24 @@ function saveGuildData(guildId, guildData) {
 		// Push new guild
 		let guild = buildGuild(guildId);
 		guild.data = guildData;
+		log("Saving new guild:", guildId);
 		db.guilds.push(guild);
 	} else {
 		// Overwrite existing guild data
-		db.guilds[guildIndex] = guildData;
+		db.guilds[guildIndex].data = guildData;
 	}
-
+	
 	saveDb(db);
 }
 
 function getDb() {	
 	let db = JSON.parse(fs.readFileSync(dbFileName, 'utf8'));
-	debug('READ:', db);
+	log('READ:', db);
 	return db;
 }
 
 function saveDb(db) {
-	debug('WRITE:', db);
+	log('WRITE:', db);
 	fs.writeFileSync(dbFileName, JSON.stringify(db));
 }
 
