@@ -403,7 +403,7 @@ function logUserFeedback(message, args) {
 function formatTime(ms) {
 	// Convert
 	let minutes = Math.floor(ms / 60000);
-	let seconds = ((ms % 60000) / 1000).toFixed(0);
+	let seconds = Math.floor((ms % 60000) / 1000);
 	let milliseconds = ms % 1000;
 
 	// Padding
@@ -415,7 +415,7 @@ function formatTime(ms) {
 
 function timeToMs(time) {
 	let minutes = parseInt(time.match(/^\d+/)[0]);
-	let seconds = parseInt(time.match(/:\d/)[0].replace(/:/, ''));
+	let seconds = parseInt(time.match(/:\d+/)[0].replace(/:/, ''));
 	let milliseconds = parseInt(time.match(/\.\d+/)[0].replace(/\./, ''));
 
 	milliseconds += seconds * 1000;
