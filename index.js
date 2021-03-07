@@ -201,7 +201,7 @@ function addDailyTime(message, time) {
 
 	// Determine message
 	if(isNew) {
-		message.channel.send(`Time added.  Your rank is **#${rank}**`);
+		message.channel.send(`Time added.  Your rank is **#${rank}**.`);
 	} else if (isBest) {
 		message.channel.send(`Time added.  Your new rank is **#${rank}**.\nCongratulations on the new personal best!`);
 	} else {
@@ -209,9 +209,45 @@ function addDailyTime(message, time) {
 	}
 }
 
-function addWeeklyTime(guildId, time) {
-	message.channel.send(`Not ready yet.`);
-	// TODO: Just use one func and pass in the appropriate leaderboards and guildId
+function addWeeklyTime(message, time) {
+	// End if no daily board
+	let guildId = getGuildId(message);
+	let guildData = getGuildData(guildId);
+	if (!guildData.weekly) {
+		return message.channel.send("There's no active daily challenge.");
+	}
+	
+	// Get data
+	let username = message.author.username;
+	let userId = message.author.id;
+	let proof = 'www.example.com';
+	let newRecord = { id: userId, username, time, proof };
+	let oldRecord = guildData.weekly.records.find((record) => record.id === userId);
+
+	// Determine if new best
+	let rank = 'unranked';
+	let isNew = !oldRecord;
+	let isBest = isNew || newRecord.time < oldRecord.time;
+	if (isBest) {
+		// Replace old
+		guildData.weekly.records = guildData.weekly.records
+			.filter((record) => record.id !== userId)
+		guildData.weekly.records.push(newRecord);
+		rank = guildData.weekly.records.sort().findIndex((record) => record.id === userId) + 1;
+
+		// Save
+		log('Adding new record:', newRecord);
+		saveGuildData(guildId, guildData);
+	}
+
+	// Determine message
+	if(isNew) {
+		message.channel.send(`Time added.  Your rank is **#${rank}**.`);
+	} else if (isBest) {
+		message.channel.send(`Time added.  Your new rank is **#${rank}**.\nCongratulations on the new personal best!`);
+	} else {
+		message.channel.send(`You failed to beat your previous best of \`${formatTime(oldRecord.time)}\``);
+	}
 }
 
 // RANDOM /////////////////////////////////////////////////////////////////////
