@@ -386,10 +386,10 @@ function sendRanks(message, args) {
 function sendHelpMessage(message) {
 	let helpMessage = "Hello, my name is rallybot. Here are some commands:" +
 		"\n`!rallybot <daily|weekly>` Show the current leaderboard for the given challenge" +
-		"\n`!rallybot set <daily|weekly> <description> Set the description for a given challenge" +
+		"\n`!rallybot set <daily|weekly> <description>` Set the description for a given challenge" +
 		"\n`!rallybot add <daily|weekly> <0:00.000>` Add record to given challenge." + 
 		"\n`!rallybot remove <daily|weekly> <rank|user>` Remove record from given challenge." + 
-		"\n`!rallybot random <car|class|locale|stage>` Show random data." + 
+		"\n`!rallybot random <car|class|location|stage>` Show random data." + 
 		"\nExample:\n\`\`\`!rallybot add daily 1:23.456\`\`\`";
 
 	message.channel.send(helpMessage);
