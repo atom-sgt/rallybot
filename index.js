@@ -277,17 +277,18 @@ function parseRandom(message, args) {
 }
 
 function randomRally() {
-	let group = groups.random();
+	
+	let vehicle = !(Math.random() < 0.5) ? groups.random() : cars.random();
 	let loc = locales.random();
 	let stage = loc.stages.random();
 	let conditions = loc.conditions.random();
 	
-	return `${group.name} | ${randomStage()}`;
+	return `${vehicle.name} / ${randomStage()}`;
 }
 
 function randomStage() {
 	let loc = locales.random();
-	return `${loc.stages.random()} (${loc.conditions.random()}), ${loc.name}`;
+	return `${loc.stages.random()}, ${loc.name} / ${loc.conditions.random()}`;
 }
 
 // REMOVE /////////////////////////////////////////////////////////////////////
