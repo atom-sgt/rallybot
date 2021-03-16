@@ -1,0 +1,28 @@
+{
+  "name": "rallybot",
+  "version": "2.0.0",
+  "description": "Rallybot is a Discord bot for Dirt Rally 2.0 time leaderboards.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/atom-sgt/rallybot.git"
+  },
+  "keywords": [
+    "discord",
+    "bot",
+    "dirt",
+    "rally"
+  ],
+  "author": "atom-sgt",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/atom-sgt/rallybot/issues"
+  },
+  "homepage": "https://github.com/atom-sgt/rallybot#readme",
+  "dependencies": {
+    "discord.js": "^12.5.1"
+  }
+}
