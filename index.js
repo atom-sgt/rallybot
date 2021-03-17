@@ -30,6 +30,7 @@ function commandListener(message) {
 
 	// Forward command
 	switch(botCommand) {
+		case 'rb':
 		case 'rallybot':
 			rallyBot(message, args);
 	}
