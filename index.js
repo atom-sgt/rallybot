@@ -26,15 +26,8 @@ function commandListener(message) {
 	
 	// Parse command
 	const args = message.content.slice(prefix.length).trim().split(/ +/);
-	const botCommand = args.shift().toLowerCase();
-
 	// Forward command
-	switch(botCommand) {
-		case 'rb':
-		case 'rallybot':
-			rallyBot(message, args);
-	}
-	// TODO: Will there ever be more here?
+	rallyBot(message, args);
 }
 
 function rallyBot(message, args) {
