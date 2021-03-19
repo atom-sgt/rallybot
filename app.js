@@ -14,7 +14,7 @@ const dbFileName = './data/database.json';
 
 // Start Discord client
 const client = new Discord.Client();
-client.once('ready', () => { console.log('Bot running...'); });
+client.once('ready', () => { console.log('RallyBot running...'); });
 client.login(token);
 client.on('message', commandListener);
 
@@ -25,7 +25,11 @@ function commandListener(message) {
 	}
 	
 	// Parse command
-	const args = message.content.slice(prefix.length).trim().split(/ +/);
+	const args = message.content
+		.slice(prefix.length)
+		.trim()
+		.split(/\s+/)
+		.filter(arg => arg !== '');
 	// Forward command
 	rallyBot(message, args);
 }
@@ -34,16 +38,16 @@ function rallyBot(message, args) {
 	log("COMMAND:", args);
 	// log(message);
 
-	// Skip no args, send help text
+	// Skip no args
 	if(!args.length) {
-		sendHelpMessage(message);
+		message.channel.send("Hello");
 		return;
 	}
 
 	// Parse command
 	try {
 		let command = args.shift();
-		switch(command) {				
+		switch(command) {
 			// Print Board
 			case 'guild': 
 			case 'server': 
