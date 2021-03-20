@@ -2,8 +2,9 @@
   "name": "rallybot",
   "version": "2.0.0",
   "description": "Rallybot is a Discord bot for Dirt Rally 2.0 time leaderboards.",
-  "main": "app.js",
+  "main": "src/app.js",
   "scripts": {
+	"start": "node src/app.js",
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "repository": {

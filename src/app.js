@@ -1,6 +1,6 @@
 const Discord = require('discord.js');
-const { token } = require('./client.json');
-const { prefix } = require('./config.json');
+const { token } = require('../client.json');
+const { prefix } = require('../config.json');
 const { rallybot } = require('./rallybot.js');
 
 // Start Discord client
