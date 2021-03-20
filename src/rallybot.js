@@ -1,16 +1,11 @@
 const fs = require('fs');
+const log = require('./fancy-log.js');
 // Data
 const { cars, groups, locales } = require('../data/dirt-rally-2-data.json');
 const dbFileName = './data/database.json';
 
-// Logging shortcuts
-const isDebug = true;
-const log = console.log;
-const debug = (message) =>  isDebug && log(message);
-
 function rallybot(message, args) {
-	log("COMMAND:", args);
-	// log(message);
+	log.info(message.content);
 
 	// Skip no args
 	if(!args.length) {
@@ -46,15 +41,11 @@ function rallybot(message, args) {
 			case 'remove':
 				parseRemove(message, args);
 				break;
-			// Other
-			case 'please':
-				logUserFeedback(message, args);
-				break;
 			default:
 				sendHelpMessage(message);
 		}
 	} catch (error) {
-		console.error(error);
+		log.error(error);
 		message.channel.send("Something went wrong.");
 	}
 }
@@ -156,7 +147,7 @@ function addDailyTime(message, time) {
 		rank = guildData.daily.records.sort().findIndex((record) => record.id === userId) + 1;
 
 		// Save
-		log('Adding new record:', newRecord);
+		log.info('Adding new record:', newRecord);
 		saveGuildData(guildId, guildData);
 	}
 
@@ -197,7 +188,7 @@ function addWeeklyTime(message, time) {
 		rank = guildData.weekly.records.sort().findIndex((record) => record.id === userId) + 1;
 
 		// Save
-		log('Adding new record:', newRecord);
+		log.info('Adding new record:', newRecord);
 		saveGuildData(guildId, guildData);
 	}
 
@@ -274,7 +265,7 @@ function parseRemove(message, args) {
 }
 
 function removeByRank(message, rank, targetBoard, guildId, guildData) {
-	log('Removing rank:', guildId, targetBoard, rank);
+	log.info('Removing rank:', guildId, targetBoard, rank);
 	if(rank >= 0 && rank <= guildData[targetBoard].records.length) {
 		guildData[targetBoard].records.slice(rank - 1, 1);
 		saveGuildData(guildId, guildData);
@@ -286,7 +277,7 @@ function removeByRank(message, rank, targetBoard, guildId, guildData) {
 }
 
 function removeByUsername(message, username, targetBoard, guildId, guildData) {
-	log('Removing user:', targetBoard, username);
+	log.info('Removing user:', targetBoard, username);
 	let challenge = guildData[targetBoard];
 	
 	// Sanitize name
@@ -355,11 +346,6 @@ function sendHelpMessage(message) {
 		"\nExample:\n\`\`\`!rallybot add daily 1:23.456\`\`\`";
 
 	message.channel.send(helpMessage);
-}
-
-// OTHER COMMANDS /////////////////////////////////////////////////////////////
-function logUserFeedback(message, args) {
-	log('FEEDBACK:', args.join(' '));
 }
 
 // UTILS //////////////////////////////////////////////////////////////////////
@@ -431,7 +417,7 @@ function saveGuildData(guildId, guildData) {
 		// Push new guild
 		let guild = buildGuild(guildId);
 		guild.data = guildData;
-		log("Saving new guild:", guildId);
+		log.info("Saving new guild:", guildId);
 		db.guilds.push(guild);
 	} else {
 		// Overwrite existing guild data
@@ -443,12 +429,12 @@ function saveGuildData(guildId, guildData) {
 
 function getDb() {	
 	let db = JSON.parse(fs.readFileSync(dbFileName, 'utf8'));
-	log('READ:', db);
+	log.debug('READ:', db);
 	return db;
 }
 
 function saveDb(db) {
-	log('WRITE:', db);
+	log.debug('WRITE:', db);
 	fs.writeFileSync(dbFileName, JSON.stringify(db));
 }
 
