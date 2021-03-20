@@ -24,10 +24,6 @@ function rallybot(message, args) {
 		let command = args.shift();
 		switch(command) {
 			// Print Board
-			case 'guild': 
-			case 'server': 
-				log(getGuildData(getGuildId(message)));
-				break;
 			case 'daily':
 				sendDailyBoard(message, args);
 				break;
@@ -38,14 +34,7 @@ function rallybot(message, args) {
 			case 'random':
 				parseRandom(message, args);
 				break;
-			case 'rank':
-			case 'ranks':
-				// sendRanks(message, args);
-				break;
 			// Board management
-			case 'new':
-				parseNew(message, args);
-				break;
 			case 'set':
 				setChallenge(message, args);
 				break;
