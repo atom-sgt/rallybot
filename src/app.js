@@ -11,7 +11,7 @@ client.on('message', commandListener);
 
 function commandListener(message) {
 	// Skip commandless or bot messages
-	if (!message.content.startsWith(prefix) || message.author.bot) {
+	if (!message.content.startsWith(prefix) || message.author.bot || message.channel.type == 'dm') {
 		return;
 	}
 	
