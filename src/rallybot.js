@@ -1,11 +1,18 @@
 const fs = require('fs');
+const { prefix, dbConnection } = require('../config.json');
 const log = require('./fancy-log.js');
 // Data
 const { cars, groups, locales } = require('../data/dirt-rally-2-data.json');
 const dbFileName = './data/database.json';
 
-function rallybot(message, args) {
+function rallybot(message) {
 	log.info(message.content);
+	// Parse command
+	let args = message.content
+		.slice(prefix.length)
+		.trim()
+		.split(/\s+/)
+		.filter(arg => arg !== '');
 
 	// Skip no args
 	if(!args.length) {
