@@ -1,6 +1,8 @@
 const { dbConnection } = require('../config.json');
 const { Sequelize, DataTypes } = require('sequelize');
-const sequelize = new Sequelize(dbConnection, {});
+const sequelize = new Sequelize(dbConnection, {
+	logging: false,
+});
 sequelize.sync({ alter: true });
 
 const Car = sequelize.define('Car', {

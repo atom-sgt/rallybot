@@ -1,55 +1,41 @@
 const fs = require('fs');
-const { prefix, dbConnection } = require('../config.json');
 const log = require('./fancy-log.js');
-// Data
-const { cars, groups, locales } = require('../data/dirt-rally-2-data.json');
-const dbFileName = './data/database.json';
+const { prefix, dbConnection } = require('../config.json');
+const { Sequelize, Op } = require('sequelize');
+const sequelize = new Sequelize(dbConnection, { log: log.debug, });
+const { Locale, Stage, Condition, WrcClass, Rally, UserTime, GuildUser } = require('./models.js');
 
 function rallybot(message) {
-	log.info(message.content);
-	// Parse command
-	let args = message.content
-		.slice(prefix.length)
-		.trim()
-		.split(/\s+/)
-		.filter(arg => arg !== '');
-
-	// Skip no args
-	if(!args.length) {
-		message.channel.send("Hello");
-		return;
-	}
-
-	// Parse command
 	try {
+		log.info(message.content);
+
+		// Parse command
+		let args = messageToArgs(message);
+
+		// Skip no args
+		if(!args.length) {
+			message.channel.send("Hello");
+			return;
+		}
+
+		// Parse command
+		// NOTE: Quick parse for single commands. Do a more detailed parse if nothing hits.
 		let command = args.shift();
 		switch(command) {
-			// Print Board
-			case 'daily':
-				sendDailyBoard(message, args);
+			case 'locations':
+			case 'locales':
+				cmdLocaleCodes(message);
 				break;
-			case 'weekly':
-				sendWeeklyBoard(message, args);
+			case 'stages':
+				let localeCode = args.shift();
+				cmdStages(message, localeCode);
 				break;
-			// Data
-			case 'random':
-				parseRandom(message, args);
-				break;
-			// Board management
-			case 'set':
-				setChallenge(message, args);
-				break;
-			case 'reset':
-				resetRecords(message, args);
-				break;
-			case 'add':
-				parseAdd(message, args);
-				break;
-			case 'remove':
-				parseRemove(message, args);
+			case 'classes':
+			case 'groups':
+				cmdWrcClasses(message);
 				break;
 			default:
-				sendHelpMessage(message);
+				parseArgs(message);
 		}
 	} catch (error) {
 		log.error(error);
@@ -57,305 +43,150 @@ function rallybot(message) {
 	}
 }
 
-// NEW ////////////////////////////////////////////////////////////////////////
-function parseNew(message, args) {
-	let opt = args.shift();
+// COMMANDS ///////////////////////////////////////////////////////////////////
+function cmdLocaleCodes(message) {
+	Locale.findAll()
+		.then((locales) => 
+			sendLocaleCodes(message, locales));
+}
 
-	switch(opt) {
-		case 'daily':
-			// initDailyChallenge();
-			break;
-		case 'weekly':
-			// initWeeklyChallenge();
-			break;
-		case 'random':
-			// initRandomChallenge();
-			break;
-		default:
-			// TODO: Better help text on bad opt
-			sendHelpMessage();				
+async function cmdStages(message, localeCode) {
+	if (localeCode) {
+		let locale = await Locale.findOne({
+		  where: {
+		    code: localeCode
+		  }
+		});
+
+		let stages = await Stage.findAll({
+			where: {
+				localeId: locale.id
+			}
+		});
+
+		sendStages(message, locale, stages);
+	}
+	else
+	{
+		message.channel.send("Please specify a country code.");
+		cmdLocaleCodes(message);
 	}
 }
 
-function setChallenge(message, args) {
-	let target = args.shift();
-
-	let guildId = getGuildId(message);
-	let guildData = getGuildData(guildId);
-	
-	if (!guildData[target]) {
-		message.channel.send("Not challenge exists by that name");
-	} else {
-		guildData[target].challenge = args.join(' ');
-		saveGuildData(guildId, guildData);
-		message.channel.send(`Challenge updated.`);
-	}
+function cmdWrcClasses(message) {
+	WrcClass.findAll()
+		.then((wrcClasses) => 
+			sendWrcClassCodes(message, wrcClasses));
 }
 
-function resetRecords(message, args) {
-	let targetBoard = args.shift();
-
-	let guildId = getGuildId(message);
-	let guildData = getGuildData(guildId);
-	if (!guildData[targetBoard]) {
-		message.channel.send('No challenge exists by that name.');
-	} else {
-		guildData[targetBoard].records = [];
-		saveGuildData(guildId, guildData);
-
-		message.channel.send(`Records reset for ${targetBoard}.`);
-	}
+// MESSAGE SENDERS ////////////////////////////////////////////////////////////
+function sendLocaleCodes(message, locales) {
+	let response = `>>> ${locales.sort((a, b) => a.id - b.id).map((locale) => `**${locale.code}**: ${locale.name}`).join('\n')}`;
+	message.channel.send(response);
 }
 
-// ADD ////////////////////////////////////////////////////////////////////////
-function parseAdd(message, args) {
-	let target = args.shift();
-	let time = args.shift();
-	let username = message.author.username;
-
-	// TODO: Validate time
-
-	switch(target) {
-		case 'daily':
-			addDailyTime(message, timeToMs(time));
-			break;
-		case 'weekly':
-			addWeeklyTime(message, timeToMs(time));
-			break;
-		default:
-			sendHelpMessage();
-	}
-}
-
-function addDailyTime(message, time) {
-	// End if no daily board
-	let guildId = getGuildId(message);
-	let guildData = getGuildData(guildId);
-	if (!guildData.daily) {
-		return message.channel.send("There's no active daily challenge.");
-	}
-	
-	// Get data
-	let username = message.author.username;
-	let userId = message.author.id;
-	let proof = 'www.example.com';
-	let newRecord = { id: userId, username, time, proof };
-	let oldRecord = guildData.daily.records.find((record) => record.id === userId);
-
-	// Determine if new best
-	let rank = 'unranked';
-	let isNew = !oldRecord;
-	let isBest = isNew || newRecord.time < oldRecord.time;
-	if (isBest) {
-		// Replace old
-		guildData.daily.records = guildData.daily.records
-			.filter((record) => record.id !== userId)
-		guildData.daily.records.push(newRecord);
-		rank = guildData.daily.records.sort().findIndex((record) => record.id === userId) + 1;
-
-		// Save
-		log.info('Adding new record:', newRecord);
-		saveGuildData(guildId, guildData);
-	}
-
-	// Determine message
-	if(isNew) {
-		message.channel.send(`Time added.  Your rank is **#${rank}**.`);
-	} else if (isBest) {
-		message.channel.send(`Time added.  Your new rank is **#${rank}**.\nCongratulations on the new personal best!`);
-	} else {
-		message.channel.send(`You failed to beat your previous best of \`${formatTime(oldRecord.time)}\``);
-	}
-}
-
-function addWeeklyTime(message, time) {
-	// End if no daily board
-	let guildId = getGuildId(message);
-	let guildData = getGuildData(guildId);
-	if (!guildData.weekly) {
-		return message.channel.send("There's no active daily challenge.");
-	}
-	
-	// Get data
-	let username = message.author.username;
-	let userId = message.author.id;
-	let proof = 'www.example.com';
-	let newRecord = { id: userId, username, time, proof };
-	let oldRecord = guildData.weekly.records.find((record) => record.id === userId);
-
-	// Determine if new best
-	let rank = 'unranked';
-	let isNew = !oldRecord;
-	let isBest = isNew || newRecord.time < oldRecord.time;
-	if (isBest) {
-		// Replace old
-		guildData.weekly.records = guildData.weekly.records
-			.filter((record) => record.id !== userId)
-		guildData.weekly.records.push(newRecord);
-		rank = guildData.weekly.records.sort().findIndex((record) => record.id === userId) + 1;
-
-		// Save
-		log.info('Adding new record:', newRecord);
-		saveGuildData(guildId, guildData);
-	}
-
-	// Determine message
-	if(isNew) {
-		message.channel.send(`Time added.  Your rank is **#${rank}**.`);
-	} else if (isBest) {
-		message.channel.send(`Time added.  Your new rank is **#${rank}**.\nCongratulations on the new personal best!`);
-	} else {
-		message.channel.send(`You failed to beat your previous best of \`${formatTime(oldRecord.time)}\``);
-	}
-}
-
-// RANDOM /////////////////////////////////////////////////////////////////////
-function parseRandom(message, args) {
-	let opt = args.shift();
-	let response = '';
-	switch (opt) {
-		case 'car':
-			response = cars.random().name;
-			break;
-		case 'stage':
-			response = randomStage();
-			break;
-		case 'location':
-		case 'locale':
-			response = locales.random().name
-			break;
-		case 'class':
-		case 'group':
-			response = groups.random().name;
-			break;
-		default:
-			response = randomRally();
-	}
+function sendStages(message, locale, stages) {
+	let response = `>>> Here are the stages available for ${locale.name}:\n` +
+	`${stages.sort((a, b) => a.id - b.id).map((stage) => `**${stage.code}**: ${stage.name}`).join('\n')}`;
 
 	message.channel.send(response);
 }
 
-function randomRally() {
-	
-	let vehicle = !(Math.random() < 0.5) ? groups.random() : cars.random();
-	let loc = locales.random();
-	let stage = loc.stages.random();
-	let conditions = loc.conditions.random();
-	
-	return `${vehicle.name} / ${randomStage()}`;
+function sendWrcClassCodes(message, wrcClasses) {
+	let response = `>>> ${wrcClasses.sort((a, b) => a.id - b.id).map((wrcClass) => `**${wrcClass.code}**: ${wrcClass.name}`).join('\n')}`;
+
+	message.channel.send(response);
 }
 
-function randomStage() {
-	let loc = locales.random();
-	return `${loc.stages.random()}, ${loc.name} / ${loc.conditions.random()}`;
+function sendTimeAdded(message, locale, stage, conditions, time) {
+	let response = `${locale.name}\n${stage.name} / ${conditions.name}\n${formatTime(time)}`;
+
+	message.channel.send(response);
 }
 
-// REMOVE /////////////////////////////////////////////////////////////////////
-function parseRemove(message, args) {
-	let targetBoard = args.shift();
-	let targetRecord = args.shift();
-
-	// Get challenge data
-	let guildId = getGuildId(message);
-	let guildData = getGuildData(guildId);
-	if (!guildData[targetBoard]) {
-		return message.channel.send("No challenge exists by that name.");
-	}
-
-	// Remove
-	if(targetRecord.match(/^#?\d/)) {
-		removeByRank(message, targetRecord.match(/\d+/)[0], targetBoard, guildId, guildData);
-	} else {
-		// Assume username if not all digits
-		removeByUsername(message, targetRecord, targetBoard, guildId, guildData);
-	}
-}
-
-function removeByRank(message, rank, targetBoard, guildId, guildData) {
-	log.info('Removing rank:', guildId, targetBoard, rank);
-	if(rank >= 0 && rank <= guildData[targetBoard].records.length) {
-		guildData[targetBoard].records.slice(rank - 1, 1);
-		saveGuildData(guildId, guildData);
-
-		message.channel.send(`Record ${rank} has been removed.`);
-	} else {
-		message.channel.send(`No record found for the specified rank.`);
-	}
-}
-
-function removeByUsername(message, username, targetBoard, guildId, guildData) {
-	log.info('Removing user:', targetBoard, username);
-	let challenge = guildData[targetBoard];
-	
-	// Sanitize name
-	username = username.replace(/^@/, '');
-
-	if(challenge.records.findIndex(val => val.username === username) !== -1) {
-		// Filter records w/ username
-		challenge.records = challenge.records
-			.filter(rec => rec.username !== username);
-		guildData[targetBoard] = challenge;
-
-		// Write new records
-		saveGuildData(guildId, guildData);
-
-		message.channel.send(`${username} has been removed from ${targetBoard} records.`);
-	} else {
-		message.channel.send("No record found for that user.");
-	}
-}
-
-// BOARD PRINT ////////////////////////////////////////////////////////////////
-function buildLeaderboardMessage(board) {
-	let ranks = (board.records.length) ? 
-		board.records.sort()
-			.map((rec, index) => `#${index+1}\t${formatTime(rec.time)} - ${rec.username}`)
-			.join('\n') :
-		"No records"
-
-	return `\`${board.challenge}\`\n\`\`\`${ranks}\`\`\``; 
-}
-
-function sendDailyBoard(message, args) {
-	let data = getGuildData(getGuildId(message));
-	message.channel.send(buildLeaderboardMessage(data.daily));
-}
-
-function sendWeeklyBoard(message, args) {
-	let data = getGuildData(getGuildId(message));
-	message.channel.send(buildLeaderboardMessage(data.weekly));
-}
-
-function sendRanks(message, args) {
-	let guildData = getGuildData(getGuildId(message));
-	let ranks = guildData.map((challenge) => {
-		let index = challenge.records.findIndex((record) => 
-			record.username === message.author.username);
-		if(index !== -1) {
-			return `${challenge.id}: #${index + 1}`;
-		}
-	});
-
-	if(ranks.length) {
-		message.channel.send(`\`\`\`${ranks.join('\n')}\`\`\``);
-	}
-}
-
-// HELP ///////////////////////////////////////////////////////////////////////
 function sendHelpMessage(message) {
-	let helpMessage = "Hello, my name is rallybot. Here are some commands:" +
-		"\n`!rallybot <daily|weekly>` Show the current leaderboard for the given challenge" +
-		"\n`!rallybot set <daily|weekly> <description>` Set the description for a given challenge" +
-		"\n`!rallybot reset <daily|weekly>` Clears all times for the given challenge." +
-		"\n`!rallybot add <daily|weekly> <0:00.000>` Add record to given challenge." + 
-		"\n`!rallybot remove <daily|weekly> <rank|user>` Remove record from given challenge." + 
-		"\n`!rallybot random <car|class|location|stage>` Show random data." + 
-		"\nExample:\n\`\`\`!rallybot add daily 1:23.456\`\`\`";
+	let helpMessage = "Hello, my name is rallybot. Here are basic commands:\n" +
+		`Adding a time: ${prefix} <stage shorthand code> <WRC class shorthand code> <0:00.000> (order and capitalization don't matter).` +
+		`Shorthand codes: ${prefix} <locations|stages <location code>|classes>\n` +
+		`Example: \`${prefix} h1 us-01w 1:23.456\`\n`;
 
 	message.channel.send(helpMessage);
 }
 
 // UTILS //////////////////////////////////////////////////////////////////////
+function messageToArgs(message) {
+	return message.content
+		.slice(prefix.length)
+		.split(/\s+/)
+		.filter(arg => arg !== '');
+}
+
+async function parseArgs(message) {
+	try {
+		// Get codes
+		const guildId = message.channel.guild?.id
+		const userId = message.author.id;
+		const locales = await Locale.findAll();
+		const stages = await Stage.findAll();
+		const wrcClasses = await WrcClass.findAll();
+
+		// Pull codes from message
+		let codes = message.content
+			.slice(prefix.length)
+			.toLowerCase()
+			.match(/(?<locale>[a-z]{2,3})[\W]?(?<stage>\d{2})[\W]?(?<conditions>[w])?/)
+			?.groups;
+
+		// Pull time from message
+		let time = message.content
+			.match(/(?<min>\d{1,2}):(?<sec>\d{2})([.:](?<ms>\d{1,3}))?/)
+			?.groups;
+
+		// Build args object
+		let locale = locales.find((locale) => locale.code.toLowerCase() === codes.locale);
+		let stage = stages.find((stage) => stage.localeId === locale?.id && stage.code.toLowerCase() === codes.stage);
+		let args = { 
+			locale,
+			stage,
+			conditions: codes.conditions ?? '',
+			time: timeToMs(time.min, time.sec, time.ms),
+			permalink: getPermalink(message),
+		};
+		log.info('args:', args);
+
+		// Do command
+		if (locale && stage && time) {
+			// TODO: Add time, send response.
+			log.info(`Updating User<${userId}>: Adding ${args.time} to ${`${args.locale.code}-${args.stage.code}${args.conditions}`.toUpperCase()}`);
+		}
+	} catch (error) {
+		log.error(error);
+		message.channel.send("Something went wrong when parsing that command.");
+	}
+}
+
+function calcPoints(rank, count) {
+	return sqrt(count)/sqrt(rank/10);
+}
+
+async function getRallyId(localeId, stageId, conditionId = 1, wrcClassId) {
+	try {
+		return await Rally.findOne({
+			where: {
+				localeId: localeId,
+				stageId: stageId,
+				wrcClassId: wrcClassId,
+			}
+		});
+	} catch (error) {
+		log.error("Unable to retrieve rally.", error);
+	}
+}
+
+function getPermalink(message) {
+	return `https://discord.com/channels/${message.channel.guild?.id ?? '@me'}/${message.channel.id}/${message.id}`
+}
+
 function formatTime(ms) {
 	// Convert
 	let minutes = Math.floor(ms / 60000);
@@ -369,7 +200,15 @@ function formatTime(ms) {
 	return `${minutes}:${seconds}.${milliseconds}`;
 }
 
-function timeToMs(time) {
+function timeToMs(minutes = 0, seconds = 0, milliseconds = 0) {
+	milliseconds = parseInt(milliseconds);
+	milliseconds += parseInt(seconds) * 1000;
+	milliseconds += parseInt(minutes) * 60000;
+
+	return milliseconds;
+}
+
+function formattedTimeToMs(time) {
 	let minutes = parseInt(time.match(/^\d+/)[0]);
 	let seconds = parseInt(time.match(/:\d+/)[0].replace(/:/, ''));
 	let milliseconds = parseInt(time.match(/\.\d+/)[0].replace(/\./, ''));
@@ -380,73 +219,8 @@ function timeToMs(time) {
 	return milliseconds;
 }
 
-function buildGuild(guildId) {
-	return {
-		id: guildId,
-		data: {
-			daily: {
-				challenge: 'No challenge set',
-				records: [],
-			},
-			weekly: {
-				challenge: 'No challenge set',
-				records: [],
-			},
-			random: {
-				challenge: 'No challenge set',
-				records: [],
-			},
-		}
-	};
-}
-
-function getGuildId(message) {
-	return message.channel.guild.id;
-}
-
-function getGuildData(guildId) {
-	let db = getDb();
-	let guild = db.guilds.find((guild) => guild.id === guildId);
-	let guildIndex = db.guilds.findIndex((dbGuild) => dbGuild.id === guildId);
-
-	if (!guild) {
-		guild = buildGuild(guildId);
-	}
-	
-	return guild.data;
-}
-
-function saveGuildData(guildId, guildData) {
-	let db = getDb();
-	let guildIndex = db.guilds.findIndex((dbGuild) => dbGuild.id === guildId);
-	
-	if (guildIndex === -1) {
-		// Push new guild
-		let guild = buildGuild(guildId);
-		guild.data = guildData;
-		log.info("Saving new guild:", guildId);
-		db.guilds.push(guild);
-	} else {
-		// Overwrite existing guild data
-		db.guilds[guildIndex].data = guildData;
-	}
-	
-	saveDb(db);
-}
-
-function getDb() {	
-	let db = JSON.parse(fs.readFileSync(dbFileName, 'utf8'));
-	log.debug('READ:', db);
-	return db;
-}
-
-function saveDb(db) {
-	log.debug('WRITE:', db);
-	fs.writeFileSync(dbFileName, JSON.stringify(db));
-}
-
 Array.prototype.random = function() {
 	return this[Math.floor(Math.random() * this.length)];
 }
 
-module.exports = { rallybot }
+module.exports = rallybot;
