@@ -122,6 +122,7 @@ function messageToArgs(message) {
 }
 
 async function parseArgs(message) {
+	// TODO: Break this up and put things where they belong
 	try {
 		// Get codes
 		const guildId = message.channel.guild?.id
@@ -129,6 +130,7 @@ async function parseArgs(message) {
 		const locales = await Locale.findAll();
 		const stages = await Stage.findAll();
 		const wrcClasses = await WrcClass.findAll();
+		// TODO: Load async. Cache.
 
 		// Pull codes from message
 		let codes = message.content
@@ -138,9 +140,11 @@ async function parseArgs(message) {
 			?.groups;
 
 		// Pull time from message
-		let time = message.content
+		let timeText = message.content
 			.match(/(?<min>\d{1,2}):(?<sec>\d{2})([.:](?<ms>\d{1,3}))?/)
 			?.groups;
+
+		// TODO: Pull wrc class from message
 
 		// Build args object
 		let locale = locales.find((locale) => locale.code.toLowerCase() === codes.locale);
@@ -148,34 +152,55 @@ async function parseArgs(message) {
 		let args = { 
 			locale,
 			stage,
-			conditions: codes.conditions ?? '',
-			time: timeToMs(time.min, time.sec, time.ms),
+			conditions: (codes.conditions)?  2 : 1,
+			wrcClass: 'h1', // TODO: Remove placeholder
+			time: timeToMs(timeText.min, timeText.sec, timeText.ms),
 			permalink: getPermalink(message),
 		};
-		log.info('args:', args);
 
 		// Do command
-		if (locale && stage && time) {
-			// TODO: Add time, send response.
-			log.info(`Updating User<${userId}>: Adding ${args.time} to ${`${args.locale.code}-${args.stage.code}${args.conditions}`.toUpperCase()}`);
+		if (args.stage && args.time) {
+			// Get current time
+			let [userTime, wasCreated] = await UserTime.findOrCreate({
+		 		where: { 
+		 			userId: userId,
+		 			rallyId: await getRallyId(1, stage.id, 1) // TODO: Remove placeholder conditions and wrcClass
+		 		},
+			});
+
+			// Compare times
+			if (wasCreated || !userTime.time || userTime.time > args.time) {
+				// Update record
+				userTime.time = args.time;
+				userTime.permalink = getPermalink(message);
+				userTime.save();
+
+				log.success(`Updated UserTime (User<${userId}>): Set ${`${args.locale.code}-${args.stage.code}${args.conditions} / ${args.wrcClass}`.toUpperCase()} to ${args.time}`);
+				message.channel.send(`Best time updated.`);
+				// TODO: More detailed message.
+			} else {
+				log.info(`No update: Given time (${args.time}) failed to beat previous time (${userTime.time})`);
+				message.channel.send(`You failed to beat your previous best of ${formatTime(userTime.time)}`)
+			}
 		}
 	} catch (error) {
 		log.error(error);
+
 		message.channel.send("Something went wrong when parsing that command.");
 	}
 }
 
-function calcPoints(rank, count) {
+function calcRankPoints(rank, count) {
 	return sqrt(count)/sqrt(rank/10);
 }
 
-async function getRallyId(localeId, stageId, conditionId = 1, wrcClassId) {
+async function getRallyId(wrcClassId, stageId, localeConditionId = 1) {
 	try {
 		return await Rally.findOne({
 			where: {
-				localeId: localeId,
-				stageId: stageId,
-				wrcClassId: wrcClassId,
+				localeConditionId,
+				stageId,
+				wrcClassId,
 			}
 		});
 	} catch (error) {
@@ -184,6 +209,7 @@ async function getRallyId(localeId, stageId, conditionId = 1, wrcClassId) {
 }
 
 function getPermalink(message) {
+	// TODO: Does this already exist?
 	return `https://discord.com/channels/${message.channel.guild?.id ?? '@me'}/${message.channel.id}/${message.id}`
 }
 
