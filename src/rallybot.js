@@ -234,17 +234,6 @@ function timeToMs(minutes = 0, seconds = 0, milliseconds = 0) {
 	return milliseconds;
 }
 
-function formattedTimeToMs(time) {
-	let minutes = parseInt(time.match(/^\d+/)[0]);
-	let seconds = parseInt(time.match(/:\d+/)[0].replace(/:/, ''));
-	let milliseconds = parseInt(time.match(/\.\d+/)[0].replace(/\./, ''));
-
-	milliseconds += seconds * 1000;
-	milliseconds += minutes * 60000;
-
-	return milliseconds;
-}
-
 Array.prototype.random = function() {
 	return this[Math.floor(Math.random() * this.length)];
 }
