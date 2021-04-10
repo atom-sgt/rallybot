@@ -37,6 +37,9 @@ function rallybot(message) {
 			case 'groups':
 				cmdWrcClasses(message);
 				break;
+			case 'help':
+				sendHelpMessage(message);
+				break;
 			default:
 				parseArgs(message);
 		}
@@ -221,10 +224,10 @@ function sendBadRally(message) {
 }
 
 function sendHelpMessage(message) {
-	let helpMessage = "Hello, my name is rallybot. Here are basic commands:\n" +
-		`Adding a time: ${prefix} <stage shorthand code> <WRC class shorthand code> <0:00.000> (order and capitalization don't matter).` +
-		`Shorthand codes: ${prefix} <locations|stages <location code>|classes>\n` +
-		`Example: \`${prefix} h1 us-01w 1:23.456\`\n`;
+	let helpMessage = "Hello, my name is rallybot. Here are basic commands:" +
+		`\nAdding a time: \`${prefix} <location code>-<stage code> <WRC class code> <0:00.000>\` (order and capitalization don't matter).` +
+		`\nShorthand codes: \`${prefix} <locations | stages <location code> | classes>\`` +
+		`\nExample: \`${prefix} h1 us-01w 1:23.456\`\n`;
 
 	message.channel.send(helpMessage);
 }
