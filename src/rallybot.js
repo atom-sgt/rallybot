@@ -20,15 +20,20 @@ function rallybot(message) {
 		// NOTE: Quick parse for single commands. Do a more detailed parse if nothing hits.
 		let command = args.shift();
 		switch(command) {
+			case 'location':
 			case 'locations':
+			case 'locale':
 			case 'locales':
 				cmdLocaleCodes(message);
 				break;
+			case 'stage':
 			case 'stages':
 				let localeCode = args.shift();
 				cmdStages(message, localeCode);
 				break;
+			case 'class':
 			case 'classes':
+			case 'group':
 			case 'groups':
 				cmdWrcClasses(message);
 				break;
@@ -77,6 +82,105 @@ function cmdWrcClasses(message) {
 			sendWrcClassCodes(message, wrcClasses));
 }
 
+async function parseArgs(message) {
+	// TODO: Break this up and put things where they belong
+	try {
+		// Get codes
+		const guildId = message.channel.guild?.id
+		const userId = message.author.id;
+		const locales = await Locale.findAll();
+		const stages = await Stage.findAll();
+		const conditions = await Condition.findAll();
+		const wrcClasses = await WrcClass.findAll();
+		// TODO: Load async. Cache.
+
+		// Pull data from message
+		let stageCodes = getStageCodes(message);
+		let wrcCode = getWrcClassCode(message, wrcClasses.map(wrc => wrc.code.toLowerCase()));
+		let timeText = getTimeText(message);
+
+		// Get objects from message codes
+		let messageData = {};
+		// Locale
+		messageData.locale = locales.find((locale) => 
+			locale.code.toLowerCase() === stageCodes.locale.toLowerCase());
+		if (!messageData.locale) {
+			return sendBadLocaleCode(message, locales);
+		} else {
+			// Stage
+			messageData.stage = stages.find((stage) => 
+				stage.localeId === messageData.locale?.id &&
+				stage.code.toLowerCase() === stageCodes.stage.toLowerCase());
+
+			if (!messageData.stage) {
+				return sendBadStageCode(message, messageData.locale, stages);
+			} else {
+				// Conditions
+				// TODO: Take another look at this.
+				if (stageCodes.locale === 'SE' || stageCodes.locale === 'MC') {
+					// Skip snow locations
+					messageData.conditions = conditions.find(condition => condition.name === 'Snow');
+				} else {
+					// Default to dry
+					messageData.conditions = (stageCodes.conditions && stageCodes.conditions?.toLowerCase() === 'w') ? 
+						conditions.find(condition => condition.name === 'Wet') :
+						conditions.find(condition => condition.name === 'Dry')
+				}
+			}
+		}
+		// WRC Class
+		messageData.wrcClass = wrcClasses.find(wrc => wrc.code.toLowerCase() === wrcCode.toLowerCase());
+		// Time in ms
+		messageData.time = timeToMs(timeText.min, timeText.sec, timeText.ms);
+		// Self link
+		messageData.permalink = getPermalink(message);
+
+		// Do command
+		if (messageData.stage && messageData.time) {
+			let rally = await getRally(messageData.wrcClass.id, messageData.stage.id, messageData.conditions.id);
+			log.debug(rally);
+			if (!rally) {
+				return sendBadRally(message);
+			} else {
+				// Get current user
+				let [guildUser, isNewUser] = await GuildUser.findOrCreate({
+					where: {
+			 			guildId: guildId,
+			 			userId: userId,
+					},
+				});
+
+				// Get current time
+				let [userTime, isNewTime] = await GuildUserTime.findOrCreate({
+			 		where: { 
+			 			guildUserId: guildUser.id,
+			 			rallyId: rally.id,
+			 		},
+				});
+
+				// Compare times
+				if (isNewUser || !userTime.time || userTime.time > messageData.time) {
+					// Update record
+					userTime.time = messageData.time;
+					userTime.permalink = messageData.permalink;
+					userTime.save();
+
+					log.success(`Updated GuildUserTime (GuildUser<${guildUser.id}>): Set ${`${messageData.locale.code}-${messageData.stage.code}${messageData.conditions} / ${messageData.wrcClass}`.toUpperCase()} to ${userTime.time}`);
+					message.channel.send(`Best time updated.`);
+					// TODO: More detailed message.
+				} else {
+					log.info(`No update: Given time (${messageData.time}) failed to beat previous time (${userTime.time})`);
+					message.channel.send(`You failed to beat your previous best of ${formatTime(userTime.time)}`)
+				}	
+			}
+		}
+	} catch (error) {
+		log.error(error);
+
+		message.channel.send("Something went wrong when parsing that command.");
+	}
+}
+
 // MESSAGE SENDERS ////////////////////////////////////////////////////////////
 function sendLocaleCodes(message, locales) {
 	let response = `>>> ${locales.sort((a, b) => a.id - b.id).map((locale) => `**${locale.code}**: ${locale.name}`).join('\n')}`;
@@ -102,6 +206,20 @@ function sendTimeAdded(message, locale, stage, conditions, time) {
 	message.channel.send(response);
 }
 
+function sendBadLocaleCode(message, locales) {
+	message.channel.send("I don't recognize that location.  Here's a list of valid shorthand codes for locations.");
+	sendLocaleCodes(message, locales);
+}
+
+function sendBadStageCode(message, locale, stages) {
+	message.channel.send(`You did not provide a valid stage code.  Here's a list of valid shorthand codes for **${locale.name}**.`);
+	sendStages(message, locale, stages);
+}
+
+function sendBadRally(message) {
+	message.channel.send("I don't recognize that rally code.  Try `locations`, `stages`, or `classes` for lists or usable shorthand codes.");
+}
+
 function sendHelpMessage(message) {
 	let helpMessage = "Hello, my name is rallybot. Here are basic commands:\n" +
 		`Adding a time: ${prefix} <stage shorthand code> <WRC class shorthand code> <0:00.000> (order and capitalization don't matter).` +
@@ -119,88 +237,33 @@ function messageToArgs(message) {
 		.filter(arg => arg !== '');
 }
 
-async function parseArgs(message) {
-	// TODO: Break this up and put things where they belong
-	try {
-		// Get codes
-		const guildId = message.channel.guild?.id
-		const userId = message.author.id;
-		const locales = await Locale.findAll();
-		const stages = await Stage.findAll();
-		const wrcClasses = await WrcClass.findAll();
-		// TODO: Load async. Cache.
+function getStageCodes(message) {
+	return message.content
+		.slice(prefix.length)
+		.toLowerCase()
+		.match(/(?<locale>[a-z]{2,3})[\W]?(?<stage>\d{2})[\W]?(?<conditions>[w])?/)
+		?.groups;
+}
 
-		// Pull codes from message
-		let codes = message.content
-			.slice(prefix.length)
-			.toLowerCase()
-			.match(/(?<locale>[a-z]{2,3})[\W]?(?<stage>\d{2})[\W]?(?<conditions>[w])?/)
-			?.groups;
+function getWrcClassCode(message, validCodes) {
+	return message.content
+		.slice(prefix.length)
+		.toLowerCase()
+		.match(/\w+/g)
+		.find(arg => validCodes.includes(arg));
+}
 
-		// Pull time from message
-		let timeText = message.content
-			.match(/(?<min>\d{1,2}):(?<sec>\d{2})([.:](?<ms>\d{1,3}))?/)
-			?.groups;
-
-		// TODO: Pull wrc class from message
-
-		// Build args object
-		let locale = locales.find((locale) => locale.code.toLowerCase() === codes.locale);
-		let stage = stages.find((stage) => stage.localeId === locale?.id && stage.code.toLowerCase() === codes.stage);
-		let args = { 
-			locale,
-			stage,
-			conditions: (codes.conditions)?  2 : 1,
-			wrcClass: 'h1', // TODO: Remove placeholder
-			time: timeToMs(timeText.min, timeText.sec, timeText.ms),
-			permalink: getPermalink(message),
-		};
-
-		// Do command
-		if (args.stage && args.time) {
-			// Get current user
-			let [guildUser, isNewUser] = await GuildUser.findOrCreate({
-				where: {
-		 			guildId: guildId,
-		 			userId: userId,
-				},
-			});
-
-			// Get current time
-			let [userTime, isNewTime] = await GuildUserTime.findOrCreate({
-		 		where: { 
-		 			guildUserId: guildUser.id,
-		 			rallyId: await getRallyId(1, stage.id, 1) // TODO: Remove placeholder conditions and wrcClass
-		 		},
-			});
-
-			// Compare times
-			if (isNewUser || !userTime.time || userTime.time > args.time) {
-				// Update record
-				userTime.time = args.time;
-				userTime.permalink = getPermalink(message);
-				userTime.save();
-
-				log.success(`Updated GuildUserTime (GuildUser<${guildUser.id}>): Set ${`${args.locale.code}-${args.stage.code}${args.conditions} / ${args.wrcClass}`.toUpperCase()} to ${args.time}`);
-				message.channel.send(`Best time updated.`);
-				// TODO: More detailed message.
-			} else {
-				log.info(`No update: Given time (${args.time}) failed to beat previous time (${userTime.time})`);
-				message.channel.send(`You failed to beat your previous best of ${formatTime(userTime.time)}`)
-			}
-		}
-	} catch (error) {
-		log.error(error);
-
-		message.channel.send("Something went wrong when parsing that command.");
-	}
+function getTimeText(message) {
+	return message.content
+		.match(/(?<min>\d{1,2}):(?<sec>\d{2})([.:](?<ms>\d{1,3}))?/)
+		?.groups;
 }
 
 function calcRankPoints(rank, count) {
 	return sqrt(count)/sqrt(rank/10);
 }
 
-async function getRallyId(wrcClassId, stageId, localeConditionId = 1) {
+async function getRally(wrcClassId, stageId, localeConditionId = 1) {
 	// TODO: Add rally records to DB
 	try {
 		return await Rally.findOne({
