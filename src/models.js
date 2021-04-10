@@ -1,7 +1,7 @@
 const { dbConnection } = require('../config.json');
 const { Sequelize, DataTypes } = require('sequelize');
 const sequelize = new Sequelize(dbConnection, {
-	logging: false,
+	logging: false//log.debug,
 });
 sequelize.sync({ alter: true });
 
@@ -21,6 +21,17 @@ const GuildUser = sequelize.define('GuildUser', {
 		type: DataTypes.INTEGER,
 		defaultValue: 0,
 	}
+});
+
+const GuildUserTime = sequelize.define('GuildUserTime', {
+	guildUserId: DataTypes.BIGINT,
+	rallyId: DataTypes.INTEGER,
+	time: DataTypes.INTEGER,
+	permalink: DataTypes.STRING,
+	isVerified: {
+		type: DataTypes.BOOLEAN,
+		defaultValue: false,
+	},
 });
 
 const Locale = sequelize.define('Locale', {
@@ -48,17 +59,6 @@ const Stage = sequelize.define('Stage', {
 	code: DataTypes.STRING,
 });
 
-const UserTime = sequelize.define('UserTime', {
-	userId: DataTypes.BIGINT,
-	rallyId: DataTypes.INTEGER,
-	time: DataTypes.INTEGER,
-	permalink: DataTypes.STRING,
-	isVerified: {
-		type: DataTypes.BOOLEAN,
-		defaultValue: false,
-	},
-});
-
 const WrcClass = sequelize.define('WrcClass', {
 	name: DataTypes.STRING,
 	code: DataTypes.STRING,
@@ -72,6 +72,6 @@ module.exports = {
 	LocaleCondition,
 	Rally,
 	Stage, 
-	UserTime, 
+	GuildUserTime,
 	WrcClass,
 };

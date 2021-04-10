@@ -1,9 +1,7 @@
 const fs = require('fs');
 const log = require('./fancy-log.js');
-const { prefix, dbConnection } = require('../config.json');
-const { Sequelize, Op } = require('sequelize');
-const sequelize = new Sequelize(dbConnection, { log: log.debug, });
-const { Locale, Stage, Condition, WrcClass, Rally, UserTime, GuildUser } = require('./models.js');
+const { prefix } = require('../config.json');
+const { Locale, Stage, Condition, WrcClass, Rally, GuildUserTime, GuildUser } = require('./models.js');
 
 function rallybot(message) {
 	try {
@@ -160,22 +158,30 @@ async function parseArgs(message) {
 
 		// Do command
 		if (args.stage && args.time) {
-			// Get current time
-			let [userTime, wasCreated] = await UserTime.findOrCreate({
-		 		where: { 
+			// Get current user
+			let [guildUser, isNewUser] = await GuildUser.findOrCreate({
+				where: {
+		 			guildId: guildId,
 		 			userId: userId,
+				},
+			});
+
+			// Get current time
+			let [userTime, isNewTime] = await GuildUserTime.findOrCreate({
+		 		where: { 
+		 			guildUserId: guildUser.id,
 		 			rallyId: await getRallyId(1, stage.id, 1) // TODO: Remove placeholder conditions and wrcClass
 		 		},
 			});
 
 			// Compare times
-			if (wasCreated || !userTime.time || userTime.time > args.time) {
+			if (isNewUser || !userTime.time || userTime.time > args.time) {
 				// Update record
 				userTime.time = args.time;
 				userTime.permalink = getPermalink(message);
 				userTime.save();
 
-				log.success(`Updated UserTime (User<${userId}>): Set ${`${args.locale.code}-${args.stage.code}${args.conditions} / ${args.wrcClass}`.toUpperCase()} to ${args.time}`);
+				log.success(`Updated GuildUserTime (GuildUser<${guildUser.id}>): Set ${`${args.locale.code}-${args.stage.code}${args.conditions} / ${args.wrcClass}`.toUpperCase()} to ${args.time}`);
 				message.channel.send(`Best time updated.`);
 				// TODO: More detailed message.
 			} else {
@@ -195,6 +201,7 @@ function calcRankPoints(rank, count) {
 }
 
 async function getRallyId(wrcClassId, stageId, localeConditionId = 1) {
+	// TODO: Add rally records to DB
 	try {
 		return await Rally.findOne({
 			where: {
